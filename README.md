@@ -382,7 +382,7 @@ service cloud.firestore {
 
 Firebase console の `Firestore Database` → `ルール` で、この内容に更新して `公開` してください。
 
-Storage にも、ログイン済みユーザーが投稿メディアをアップロードできるルールが必要です。最低限の例は以下です。
+Storage にも、ログイン済みユーザーが投稿メディアやプロフィール画像をアップロードできるルールが必要です。最低限の例は以下です。
 
 ```txt
 rules_version = '2';
@@ -397,9 +397,21 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /profile-icons/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /profile-covers/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
 ```
+
+`profile-icons` はアイコン画像、`profile-covers` はプロフィール上部のヘッダー画像で使います。プロフィール画像やヘッダー画像の保存で `403 Forbidden` が出る場合は、このルールが未反映であることが多いです。
 
 ## Firebase 連携ファイル
 

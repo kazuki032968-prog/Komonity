@@ -33,21 +33,8 @@ import {
   setDoc,
   type DocumentData,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
-import {
-  advisorRegistrationFields,
-  coachRegistrationFields,
-  communityItems,
-  experts,
-  feedPosts,
-  myPageProfile,
-  myPageTabs,
-  questions,
-  registrationOptions,
-  searchTabs,
-  sportGroups,
-} from "./src/data/mockData";
 import { auth, db, hasFirebaseConfig as hasAuthConfig, storage } from "./src/lib/firebase";
 
 type ScreenKey =
@@ -111,6 +98,8 @@ type ProfileState = {
   role: string;
   bio: string;
   link: string;
+  avatarUrl: string;
+  coverUrl: string;
   externalLinks: ExternalLink[];
   joined: string;
   following: string;
@@ -156,20 +145,45 @@ type LocalMediaAsset = {
   height?: number;
   sizeBytes?: number;
 };
-type FeedPost = (typeof feedPosts)[number] & {
+type FeedPost = {
+  id: string;
+  author: string;
+  role: string;
+  title: string;
+  body: string;
+  tags: string[];
+  sports: string[];
+  likes: number;
+  reposts: number;
+  comments: number;
+  replies: Reply[];
   media?: MediaAttachment[];
   createdByUid?: string;
   authorHandle?: string;
   createdAtMs?: number;
 };
-type QuestionPost = (typeof questions)[number] & {
+type QuestionPost = {
+  id: string;
+  category: string;
+  title: string;
+  body: string;
+  author: string;
+  answers: number;
+  bestAnswer: string;
+  replies: Reply[];
   media?: MediaAttachment[];
   createdByUid?: string;
   authorHandle?: string;
   bestAnswerReplyId?: string;
   createdAtMs?: number;
 };
-type CommunityPost = (typeof communityItems)[number] & {
+type CommunityPost = {
+  id: string;
+  title: string;
+  author: string;
+  body: string;
+  cta: string;
+  replies: Reply[];
   media?: MediaAttachment[];
   createdByUid?: string;
   authorHandle?: string;
@@ -226,6 +240,7 @@ type SearchAccountItem = {
   name: string;
   handle: string;
   bio: string;
+  avatarUrl?: string;
   followers: string;
   featured: boolean;
   role: string;
@@ -233,6 +248,8 @@ type SearchAccountItem = {
 };
 type UserDirectoryMeta = {
   externalLinks: ExternalLink[];
+  iconUrl?: string;
+  coverUrl?: string;
   pinnedPostId?: string;
   pinnedPostSource?: SearchContentFilterKey;
 };
@@ -338,6 +355,149 @@ type UserActivitySummary = {
   profileCompletionScore: number;
   badges: ActivityBadge[];
 };
+
+const sportGroups = [
+  {
+    category: "球技",
+    items: [
+      "サッカー",
+      "野球",
+      "ソフトボール",
+      "バスケットボール",
+      "バレーボール",
+      "テニス",
+      "ソフトテニス",
+      "バドミントン",
+      "卓球",
+      "ラグビー",
+      "ハンドボール",
+    ],
+  },
+  {
+    category: "武道・競技",
+    items: ["陸上", "駅伝", "水泳", "体操", "剣道", "柔道", "空手道", "弓道", "登山"],
+  },
+  {
+    category: "パフォーマンス",
+    items: ["ダンス", "チア", "吹奏楽", "合唱", "軽音楽", "演劇", "放送"],
+  },
+  {
+    category: "創作・芸術",
+    items: ["美術", "書道", "写真", "茶道", "華道", "文芸"],
+  },
+  {
+    category: "学術・文化",
+    items: [
+      "科学",
+      "家庭科",
+      "料理",
+      "英語",
+      "囲碁",
+      "将棋",
+      "新聞",
+      "パソコン",
+      "eスポーツ",
+      "ボランティア",
+      "その他",
+    ],
+  },
+];
+
+const registrationOptions = [
+  {
+    id: "advisor",
+    title: "顧問として登録",
+    description:
+      "相談投稿、ベストアンサーの保存、参考になった指導者のフォロー、マイページでの活動管理ができます。",
+  },
+  {
+    id: "coach",
+    title: "指導員として登録",
+    description:
+      "経歴や実績を公開し、毎日のメニュー投稿や回答を通じて信頼を積み上げられます。",
+  },
+] as const;
+
+const advisorRegistrationFields = [
+  { label: "ニックネーム", detail: "必須", placeholder: "例: バスケ顧問A / みどり先生" },
+  { label: "表示ID", detail: "必須", placeholder: "例: @midori_teacher" },
+  { label: "担当部活", detail: "必須", placeholder: "例: 女子バスケットボール部" },
+  { label: "担当歴", detail: "必須", placeholder: "例: 6年" },
+  {
+    label: "ログイン用メールアドレス",
+    detail: "必須 / 非公開",
+    placeholder: "例: advisor@example.com",
+  },
+  {
+    label: "ログイン用パスワード",
+    detail: "必須 / 非公開",
+    placeholder: "8文字以上のパスワード",
+  },
+] as const;
+
+const coachRegistrationFields = [
+  { label: "ニックネーム", detail: "必須", placeholder: "例: 山本 真理 / Coach Mari" },
+  { label: "表示ID", detail: "必須", placeholder: "例: @coach_mari" },
+  { label: "専門種目", detail: "必須", placeholder: "例: バスケットボール" },
+  { label: "指導歴", detail: "必須", placeholder: "例: 12年" },
+  {
+    label: "今までの経歴や功績",
+    detail: "必須",
+    placeholder: "例: 全国大会出場3回、指導者研修講師など",
+  },
+  {
+    label: "電話番号",
+    detail: "任意項目 / 入力すると公開",
+    placeholder: "例: 090-1234-5678",
+  },
+  {
+    label: "メールアドレス",
+    detail: "任意項目 / 入力すると公開",
+    placeholder: "例: coach@example.com",
+  },
+  {
+    label: "ログイン用メールアドレス",
+    detail: "必須 / 非公開",
+    placeholder: "例: login@example.com",
+  },
+  {
+    label: "ログイン用パスワード",
+    detail: "必須 / 非公開",
+    placeholder: "8文字以上のパスワード",
+  },
+] as const;
+
+const defaultProfileState: ProfileState = {
+  name: "Komonityユーザー",
+  handle: "@komonity_user",
+  role: "未登録",
+  bio: "プロフィールを登録すると、投稿や回答、コミュニティ機能を利用できます。",
+  link: "komonity.jp/profile",
+  avatarUrl: "",
+  coverUrl: "",
+  externalLinks: [],
+  joined: "Komonityへようこそ",
+  following: "0",
+  followers: "0",
+  posts: "0",
+  selectedSports: [],
+};
+
+const myPageTabs = [
+  { key: "posts", label: "投稿" },
+  { key: "answers", label: "回答" },
+  { key: "best_answers", label: "ベストアンサー" },
+] as const;
+
+const searchTabs = [
+  { key: "trending-posts", label: "話題の投稿" },
+  { key: "recent", label: "最近" },
+  { key: "accounts", label: "アカウント" },
+] as const;
+
+const initialFeedPosts: FeedPost[] = [];
+const initialQuestions: QuestionPost[] = [];
+const initialCommunityItems: CommunityPost[] = [];
 
 const getAvailablePostTargets = (role: string) => {
   if (role.includes("指導員")) {
@@ -984,7 +1144,7 @@ const formatJoinedLabel = (value: unknown) => {
     return value;
   }
 
-  return myPageProfile.joined;
+  return defaultProfileState.joined;
 };
 
 const mapUserDocumentToProfileState = (data: DocumentData): ProfileState => {
@@ -996,7 +1156,7 @@ const mapUserDocumentToProfileState = (data: DocumentData): ProfileState => {
   const name =
     typeof profileData.nickname === "string" && profileData.nickname
       ? profileData.nickname
-      : myPageProfile.name;
+      : defaultProfileState.name;
   const rawExternalLinks = Array.isArray(profileData.externalLinks)
     ? profileData.externalLinks
     : [];
@@ -1024,30 +1184,38 @@ const mapUserDocumentToProfileState = (data: DocumentData): ProfileState => {
     bio:
       typeof profileData.bio === "string" && profileData.bio
         ? profileData.bio
-        : myPageProfile.bio,
+        : defaultProfileState.bio,
     link:
       typeof profileData.link === "string" && profileData.link
         ? profileData.link
-        : myPageProfile.link,
+        : defaultProfileState.link,
+    avatarUrl:
+      typeof profileData.iconUrl === "string" && profileData.iconUrl
+        ? profileData.iconUrl
+        : defaultProfileState.avatarUrl,
+    coverUrl:
+      typeof profileData.coverUrl === "string" && profileData.coverUrl
+        ? profileData.coverUrl
+        : defaultProfileState.coverUrl,
     externalLinks:
-      externalLinks.length > 0 ? externalLinks : myPageProfile.externalLinks,
+      externalLinks.length > 0 ? externalLinks : defaultProfileState.externalLinks,
     joined: formatJoinedLabel(data.createdAt),
     following:
       typeof profileData.following === "string" && profileData.following
         ? profileData.following
-        : myPageProfile.following,
+        : defaultProfileState.following,
     followers:
       typeof profileData.followers === "string" && profileData.followers
         ? profileData.followers
-        : myPageProfile.followers,
+        : defaultProfileState.followers,
     posts:
       typeof profileData.posts === "string" && profileData.posts
         ? profileData.posts
-        : myPageProfile.posts,
+        : defaultProfileState.posts,
     selectedSports:
       toArrayOfStrings(profileData.selectedSports).length > 0
         ? toArrayOfStrings(profileData.selectedSports)
-        : myPageProfile.selectedSports,
+        : defaultProfileState.selectedSports,
   };
 };
 
@@ -1372,8 +1540,8 @@ const searchContentFilters: Array<{
   { key: "community", label: "コミュニティ" },
 ];
 const initialSelectedUserProfile: UserProfileState = {
-  ...myPageProfile,
-  avatarLabel: myPageProfile.name.slice(0, 1),
+  ...defaultProfileState,
+  avatarLabel: defaultProfileState.name.slice(0, 1),
   coverTone: "#d8c7ad",
 };
 const initialRelationshipListState: RelationshipListState = {
@@ -1412,7 +1580,9 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenKey>("top");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [advisorIconUri, setAdvisorIconUri] = useState<string | null>(null);
+  const [advisorCoverUri, setAdvisorCoverUri] = useState<string | null>(null);
   const [coachIconUri, setCoachIconUri] = useState<string | null>(null);
+  const [coachCoverUri, setCoachCoverUri] = useState<string | null>(null);
   const [coachLinks, setCoachLinks] = useState<ExternalLink[]>([
     createLinkRow(1),
   ]);
@@ -1420,8 +1590,8 @@ export default function App() {
     useState<AdvisorFormState>(initialAdvisorForm);
   const [coachForm, setCoachForm] = useState<CoachFormState>(initialCoachForm);
   const [loginForm, setLoginForm] = useState<LoginFormState>(initialLoginForm);
-  const [profileState, setProfileState] = useState<ProfileState>(myPageProfile);
-  const [profileDraft, setProfileDraft] = useState<ProfileState>(myPageProfile);
+  const [profileState, setProfileState] = useState<ProfileState>(defaultProfileState);
+  const [profileDraft, setProfileDraft] = useState<ProfileState>(defaultProfileState);
   const [selectedUserProfile, setSelectedUserProfile] =
     useState<UserProfileState>(initialSelectedUserProfile);
   const [relationshipListState, setRelationshipListState] =
@@ -1446,10 +1616,10 @@ export default function App() {
   const [likeRecords, setLikeRecords] = useState<InteractionRecord[]>([]);
   const [repostRecords, setRepostRecords] = useState<InteractionRecord[]>([]);
   const [bookmarkRecords, setBookmarkRecords] = useState<InteractionRecord[]>([]);
-  const [feedTimeline, setFeedTimeline] = useState<FeedPost[]>(feedPosts);
-  const [questionBoard, setQuestionBoard] = useState<QuestionPost[]>(questions);
+  const [feedTimeline, setFeedTimeline] = useState<FeedPost[]>(initialFeedPosts);
+  const [questionBoard, setQuestionBoard] = useState<QuestionPost[]>(initialQuestions);
   const [communityBoard, setCommunityBoard] =
-    useState<CommunityPost[]>(communityItems);
+    useState<CommunityPost[]>(initialCommunityItems);
   const [composeState, setComposeState] = useState<ComposeState>(initialComposeState);
   const [composeMedia, setComposeMedia] = useState<LocalMediaAsset[]>([]);
   const [composeBodySelection, setComposeBodySelection] =
@@ -1484,8 +1654,8 @@ export default function App() {
   useEffect(() => {
     if (!authUser || !db) {
       if (!authUser) {
-        setProfileState(myPageProfile);
-        setProfileDraft(myPageProfile);
+        setProfileState(defaultProfileState);
+        setProfileDraft(defaultProfileState);
       }
       return;
     }
@@ -1562,6 +1732,12 @@ export default function App() {
 
           nextMetaMap[entry.id] = {
             externalLinks,
+            iconUrl:
+              typeof profileData.iconUrl === "string" ? profileData.iconUrl : undefined,
+            coverUrl:
+              typeof profileData.coverUrl === "string"
+                ? profileData.coverUrl
+                : undefined,
             pinnedPostId:
               typeof profileData.pinnedPostId === "string"
                 ? profileData.pinnedPostId
@@ -1590,6 +1766,12 @@ export default function App() {
                   : typeof profileData.club === "string" && profileData.club
                     ? `${profileData.club} を中心に活動しています。`
                     : "Komonity で活動中です。",
+            avatarUrl:
+              typeof profileData.iconUrl === "string" ? profileData.iconUrl : undefined,
+            coverUrl:
+              typeof profileData.coverUrl === "string"
+                ? profileData.coverUrl
+                : undefined,
             followers:
               typeof profileData.followers === "string" && profileData.followers
                 ? profileData.followers
@@ -1892,7 +2074,7 @@ export default function App() {
         };
       });
 
-      setFeedTimeline(mergeItemsById(feedPosts, firestorePosts));
+      setFeedTimeline(mergeItemsById([], firestorePosts));
     });
 
     const unsubscribeQuestions = onSnapshot(questionQuery, (snapshot) => {
@@ -1926,7 +2108,7 @@ export default function App() {
         };
       });
 
-      setQuestionBoard(mergeItemsById(questions, firestoreQuestions));
+      setQuestionBoard(mergeItemsById([], firestoreQuestions));
     });
 
     const unsubscribeCommunity = onSnapshot(communityQuery, (snapshot) => {
@@ -1950,7 +2132,7 @@ export default function App() {
         };
       });
 
-      setCommunityBoard(mergeItemsById(communityItems, firestoreCommunities));
+      setCommunityBoard(mergeItemsById([], firestoreCommunities));
     });
 
     return () => {
@@ -2085,7 +2267,15 @@ export default function App() {
     }
   };
 
-  const pickImage = async (target: "advisor" | "coach") => {
+  const pickImage = async (
+    target:
+      | "advisor"
+      | "advisor-cover"
+      | "coach"
+      | "coach-cover"
+      | "profile"
+      | "profile-cover"
+  ) => {
     clearAuthFeedback();
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -2097,7 +2287,12 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect:
+        target === "advisor-cover" ||
+        target === "coach-cover" ||
+        target === "profile-cover"
+          ? [3, 1]
+          : [1, 1],
       quality: 0.8,
     });
 
@@ -2124,7 +2319,93 @@ export default function App() {
       return;
     }
 
+    if (target === "advisor-cover") {
+      setAdvisorCoverUri(assetUri);
+      return;
+    }
+
+    if (target === "profile") {
+      setProfileDraft((current) => ({
+        ...current,
+        avatarUrl: assetUri ?? "",
+      }));
+      return;
+    }
+
+    if (target === "profile-cover") {
+      setProfileDraft((current) => ({
+        ...current,
+        coverUrl: assetUri ?? "",
+      }));
+      return;
+    }
+
+    if (target === "coach-cover") {
+      setCoachCoverUri(assetUri);
+      return;
+    }
+
     setCoachIconUri(assetUri);
+  };
+
+  const uploadProfileMedia = async ({
+    uid,
+    uri,
+    kind,
+  }: {
+    uid: string;
+    uri: string;
+    kind: "icon" | "cover";
+  }) => {
+    if (!uri) {
+      return "";
+    }
+
+    if (/^https?:\/\//.test(uri)) {
+      return uri;
+    }
+
+    if (!storage) {
+      throw new Error("storage-not-configured");
+    }
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storagePath =
+      kind === "icon"
+        ? `profile-icons/${uid}/${Date.now()}-avatar.jpg`
+        : `profile-covers/${uid}/${Date.now()}-cover.jpg`;
+    const mediaRef = ref(storage, storagePath);
+
+    await uploadBytes(mediaRef, blob, {
+      contentType: blob.type || "image/jpeg",
+    });
+
+    return getDownloadURL(mediaRef);
+  };
+
+  const deleteStorageFileByUrl = async (url: string) => {
+    if (!url || !storage || !/^https?:\/\//.test(url)) {
+      return;
+    }
+
+    try {
+      await deleteObject(ref(storage, url));
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof (error as { code?: unknown }).code === "string"
+          ? (error as { code: string }).code
+          : "";
+
+      if (errorCode.includes("object-not-found")) {
+        return;
+      }
+
+      throw error;
+    }
   };
 
   const pickMediaAssets = async ({
@@ -2362,6 +2643,20 @@ export default function App() {
         advisorForm.loginEmail,
         advisorForm.loginPassword
       );
+      const uploadedAdvisorIconUrl = advisorIconUri
+        ? await uploadProfileMedia({
+            uid: credential.user.uid,
+            uri: advisorIconUri,
+            kind: "icon",
+          })
+        : "";
+      const uploadedAdvisorCoverUrl = advisorCoverUri
+        ? await uploadProfileMedia({
+            uid: credential.user.uid,
+            uri: advisorCoverUri,
+            kind: "cover",
+          })
+        : "";
 
       completeAuthSuccess(
         "顧問アカウントを登録し、ログイン済みの状態でマイページへ移動しました。"
@@ -2375,6 +2670,8 @@ export default function App() {
         link: `komonity.jp/profile/${advisorForm.nickname
           .replace(/\s+/g, "-")
           .toLowerCase()}`,
+        avatarUrl: uploadedAdvisorIconUrl,
+        coverUrl: uploadedAdvisorCoverUrl,
         externalLinks: [],
         selectedSports: advisorForm.selectedSports,
       };
@@ -2396,7 +2693,8 @@ export default function App() {
             followers: nextProfile.followers,
             posts: nextProfile.posts,
             selectedSports: advisorForm.selectedSports,
-            iconPreviewEnabled: Boolean(advisorIconUri),
+            iconUrl: uploadedAdvisorIconUrl,
+            coverUrl: uploadedAdvisorCoverUrl,
           },
           auth: {
             loginEmail: advisorForm.loginEmail,
@@ -2413,6 +2711,7 @@ export default function App() {
 
       setAdvisorForm(initialAdvisorForm);
       setAdvisorIconUri(null);
+      setAdvisorCoverUri(null);
     } catch (error) {
       setAuthError(toAuthErrorMessage(error));
       setIsSubmitting(false);
@@ -2455,6 +2754,20 @@ export default function App() {
         coachForm.loginEmail,
         coachForm.loginPassword
       );
+      const uploadedCoachIconUrl = coachIconUri
+        ? await uploadProfileMedia({
+            uid: credential.user.uid,
+            uri: coachIconUri,
+            kind: "icon",
+          })
+        : "";
+      const uploadedCoachCoverUrl = coachCoverUri
+        ? await uploadProfileMedia({
+            uid: credential.user.uid,
+            uri: coachCoverUri,
+            kind: "cover",
+          })
+        : "";
 
       completeAuthSuccess(
         "指導員アカウントを登録し、ログイン済みの状態でマイページへ移動しました。"
@@ -2468,6 +2781,8 @@ export default function App() {
         link: `komonity.jp/profile/${coachForm.nickname
           .replace(/\s+/g, "-")
           .toLowerCase()}`,
+        avatarUrl: uploadedCoachIconUrl,
+        coverUrl: uploadedCoachCoverUrl,
         externalLinks: filteredLinks,
         selectedSports: coachForm.selectedSports,
       };
@@ -2492,7 +2807,8 @@ export default function App() {
             followers: nextProfile.followers,
             posts: nextProfile.posts,
             selectedSports: coachForm.selectedSports,
-            iconPreviewEnabled: Boolean(coachIconUri),
+            iconUrl: uploadedCoachIconUrl,
+            coverUrl: uploadedCoachCoverUrl,
             externalLinks: filteredLinks,
           },
           visibility: {
@@ -2514,6 +2830,7 @@ export default function App() {
 
       setCoachForm(initialCoachForm);
       setCoachIconUri(null);
+      setCoachCoverUri(null);
       setCoachLinks([createLinkRow(1)]);
     } catch (error) {
       setAuthError(toAuthErrorMessage(error));
@@ -3421,16 +3738,6 @@ export default function App() {
   );
 
   const searchAccounts = [
-    ...experts.map((expert, index) => ({
-      id: expert.id,
-      name: expert.name,
-      handle: `@${expert.name.replace(/\s+/g, "_").toLowerCase()}`,
-      bio: expert.headline,
-      followers: expert.followers,
-      featured: index === 0,
-      role: "指導員アカウント",
-      selectedSports: [] as string[],
-    })),
     ...directoryAccounts.map((account) => ({
       ...account,
       followers: String(followerCountMap[account.id] ?? 0),
@@ -3612,34 +3919,65 @@ export default function App() {
       return;
     }
 
-    setProfileState(profileDraft);
-    setCurrentScreen("mypage");
-
     if (!authUser || !db) {
+      setProfileState(profileDraft);
+      setCurrentScreen("mypage");
       setAuthMessage("プロフィールを更新しました。");
       return;
     }
 
     try {
+      const previousAvatarUrl = profileState.avatarUrl;
+      const previousCoverUrl = profileState.coverUrl;
+      const uploadedProfileIconUrl = profileDraft.avatarUrl
+        ? await uploadProfileMedia({
+            uid: authUser.uid,
+            uri: profileDraft.avatarUrl,
+            kind: "icon",
+          })
+        : "";
+      const uploadedProfileCoverUrl = profileDraft.coverUrl
+        ? await uploadProfileMedia({
+            uid: authUser.uid,
+            uri: profileDraft.coverUrl,
+            kind: "cover",
+          })
+        : "";
       const filteredLinks = profileDraft.externalLinks.filter(
         (link) => link.label.trim() && link.url.trim()
       );
+      const nextProfile = {
+        ...profileDraft,
+        avatarUrl: uploadedProfileIconUrl,
+        coverUrl: uploadedProfileCoverUrl,
+      };
       await saveProfileDocument(authUser.uid, {
-        role: profileDraft.role.includes("顧問") ? "advisor" : "coach",
-        roleLabel: profileDraft.role,
+        role: nextProfile.role.includes("顧問") ? "advisor" : "coach",
+        roleLabel: nextProfile.role,
         profile: {
-          nickname: profileDraft.name,
-          handle: profileDraft.handle,
-          bio: profileDraft.bio,
-          link: profileDraft.link,
-          following: profileDraft.following,
-          followers: profileDraft.followers,
-          posts: profileDraft.posts,
-          selectedSports: profileDraft.selectedSports,
+          nickname: nextProfile.name,
+          handle: nextProfile.handle,
+          bio: nextProfile.bio,
+          link: nextProfile.link,
+          iconUrl: uploadedProfileIconUrl,
+          coverUrl: uploadedProfileCoverUrl,
+          following: nextProfile.following,
+          followers: nextProfile.followers,
+          posts: nextProfile.posts,
+          selectedSports: nextProfile.selectedSports,
           externalLinks: filteredLinks,
         },
         updatedAt: serverTimestamp(),
       });
+      if (previousAvatarUrl && previousAvatarUrl !== uploadedProfileIconUrl) {
+        await deleteStorageFileByUrl(previousAvatarUrl);
+      }
+      if (previousCoverUrl && previousCoverUrl !== uploadedProfileCoverUrl) {
+        await deleteStorageFileByUrl(previousCoverUrl);
+      }
+      setProfileState(nextProfile);
+      setProfileDraft(nextProfile);
+      setCurrentScreen("mypage");
       setAuthMessage("プロフィールを更新しました。");
     } catch (error) {
       setAuthError(
@@ -3729,33 +4067,26 @@ export default function App() {
       selectedSports && selectedSports.length > 0
         ? selectedSports
         : Array.from(new Set(authoredPosts.flatMap((post) => post.sports))).slice(0, 3);
-    const expertMatch = experts.find((expert) => expert.name === name);
-
     setSelectedUserProfile({
       uid,
       name,
       handle: handle ?? createHandleFromName(name),
       role,
       bio:
-        bio ??
-        expertMatch?.headline ??
-        `${role}としてKomonityで知見共有や相談対応を行っています。`,
-      link:
-        expertMatch?.promotions
-          ? `komonity.jp/${name.replace(/\s+/g, "-").toLowerCase()}`
-          : `komonity.jp/profile/${name.replace(/\s+/g, "-").toLowerCase()}`,
+        bio ?? `${role}としてKomonityで知見共有や相談対応を行っています。`,
+      link: `komonity.jp/profile/${name.replace(/\s+/g, "-").toLowerCase()}`,
       externalLinks: uid ? directoryMetaMap[uid]?.externalLinks ?? [] : [],
+      avatarUrl: uid ? directoryMetaMap[uid]?.iconUrl ?? "" : "",
+      coverUrl: uid ? directoryMetaMap[uid]?.coverUrl ?? "" : "",
       joined: "2026年4月からKomonityを利用",
       following:
         uid && followingCountMap[uid] !== undefined
           ? String(followingCountMap[uid])
-          : expertMatch
-            ? "84"
-            : "32",
+          : "0",
       followers:
         uid && followerCountMap[uid] !== undefined
           ? String(followerCountMap[uid])
-          : followers ?? expertMatch?.followers ?? `${Math.max(authoredPosts.length, 0) * 128}`,
+          : followers ?? "0",
       posts: String(authoredPosts.length),
       selectedSports: primarySports.length > 0 ? primarySports : ["その他"],
       avatarLabel: name.slice(0, 1),
@@ -5828,41 +6159,74 @@ export default function App() {
 
       {currentScreen === "notifications" ? (
         <ScrollView contentContainerStyle={styles.pageContainer}>
-          <RegistrationHeader
-            title="通知"
-            description="いいね、返信、保存、再投稿、見逃し防止に設定したアカウントの新規投稿を確認できます。"
-            onBack={() => setCurrentScreen("top")}
-          />
-          <View style={styles.stack}>
-            {notificationItems.length === 0 ? (
-              <View style={styles.communityCard}>
-                <Text style={styles.cardTitle}>通知はまだありません</Text>
-                <Text style={styles.cardBody}>
-                  反応や見逃し防止の設定があると、ここに一覧で表示されます。
-                </Text>
+          {!authUser ? (
+            <>
+              <RegistrationHeader
+                title="通知"
+                description="通知一覧の確認には登録またはログインが必要です。登録すると、いいねや返信などの反応を確認できます。"
+                onBack={() => setCurrentScreen("top")}
+              />
+              <View style={styles.registrationCard}>
+                <View style={styles.registrationFlowCard}>
+                  <Text style={styles.registrationFlowText}>
+                    通知機能は登録済みユーザーのみ利用できます。ログインすると、いいね、返信、保存、再投稿、新規投稿通知を確認できます。
+                  </Text>
+                  <View style={styles.inlineButtonRow}>
+                    <Pressable
+                      style={styles.primaryButton}
+                      onPress={() => setCurrentScreen("registration-role")}
+                    >
+                      <Text style={styles.primaryButtonText}>登録する</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.secondaryButton}
+                      onPress={() => setCurrentScreen("login")}
+                    >
+                      <Text style={styles.secondaryButtonText}>ログインする</Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
-            ) : null}
-            {notificationItems.map((item) => (
-              <Pressable
-                key={item.id}
-                style={styles.notificationCard}
-                onPress={() => {
-                  if (item.postDetail) {
-                    openPostDetail({
-                      detail: item.postDetail,
-                      backScreen: "notifications",
-                    });
-                  }
-                }}
-              >
-                <Text style={styles.notificationTitle}>{item.title}</Text>
-                <Text style={styles.notificationBody}>{item.body}</Text>
-                <Text style={styles.notificationMeta}>
-                  {formatDateTimeWithSeconds(item.createdAtMs)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+            </>
+          ) : (
+            <>
+              <RegistrationHeader
+                title="通知"
+                description="いいね、返信、保存、再投稿、見逃し防止に設定したアカウントの新規投稿を確認できます。"
+                onBack={() => setCurrentScreen("top")}
+              />
+              <View style={styles.stack}>
+                {notificationItems.length === 0 ? (
+                  <View style={styles.communityCard}>
+                    <Text style={styles.cardTitle}>通知はまだありません</Text>
+                    <Text style={styles.cardBody}>
+                      反応や見逃し防止の設定があると、ここに一覧で表示されます。
+                    </Text>
+                  </View>
+                ) : null}
+                {notificationItems.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={styles.notificationCard}
+                    onPress={() => {
+                      if (item.postDetail) {
+                        openPostDetail({
+                          detail: item.postDetail,
+                          backScreen: "notifications",
+                        });
+                      }
+                    }}
+                  >
+                    <Text style={styles.notificationTitle}>{item.title}</Text>
+                    <Text style={styles.notificationBody}>{item.body}</Text>
+                    <Text style={styles.notificationMeta}>
+                      {formatDateTimeWithSeconds(item.createdAtMs)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
         </ScrollView>
       ) : null}
 
@@ -6340,7 +6704,7 @@ export default function App() {
                     style={styles.searchAvatar}
                     onPress={() =>
                       openUserProfile({
-                        uid: account.id.startsWith("expert-") ? undefined : account.id,
+                        uid: account.id,
                         name: account.name,
                         role: account.role,
                         bio: account.bio,
@@ -6358,7 +6722,7 @@ export default function App() {
                         style={styles.searchAccountTextWrap}
                         onPress={() =>
                           openUserProfile({
-                            uid: account.id.startsWith("expert-") ? undefined : account.id,
+                            uid: account.id,
                             name: account.name,
                             role: account.role,
                             bio: account.bio,
@@ -6375,15 +6739,11 @@ export default function App() {
                         <Pressable
                           style={[
                             styles.searchFollowButton,
-                            !account.id.startsWith("expert-") &&
                             currentFollowingUserIds.includes(account.id)
                               ? styles.searchFollowButtonFollowing
                               : styles.searchFollowButtonPrimary,
                           ]}
                           onPress={() => {
-                            if (account.id.startsWith("expert-")) {
-                              return;
-                            }
                             void toggleFollowProfile({
                               targetUid: account.id,
                               targetName: account.name,
@@ -6393,14 +6753,12 @@ export default function App() {
                           <Text
                             style={[
                               styles.searchFollowButtonText,
-                              !account.id.startsWith("expert-") &&
                               currentFollowingUserIds.includes(account.id)
                                 ? styles.searchFollowButtonTextFollowing
                                 : styles.searchFollowButtonTextPrimary,
                             ]}
                           >
-                            {!account.id.startsWith("expert-") &&
-                            currentFollowingUserIds.includes(account.id)
+                            {currentFollowingUserIds.includes(account.id)
                               ? "フォロー中"
                               : "フォロー"}
                           </Text>
@@ -6422,12 +6780,45 @@ export default function App() {
 
       {currentScreen === "mypage" ? (
         <ScrollView contentContainerStyle={styles.pageContainer}>
+          {!authUser ? (
+            <>
+              <RegistrationHeader
+                title="マイページ"
+                description="マイページの確認には登録またはログインが必要です。登録するとプロフィール編集や活動履歴の確認ができます。"
+                onBack={() => setCurrentScreen("top")}
+              />
+              <View style={styles.registrationCard}>
+                <View style={styles.registrationFlowCard}>
+                  <Text style={styles.registrationFlowText}>
+                    マイページを利用するには、会員登録またはログインが必要です。登録後にプロフィール、投稿、回答、フォロー情報を確認できます。
+                  </Text>
+                  <View style={styles.inlineButtonRow}>
+                    <Pressable
+                      style={styles.primaryButton}
+                      onPress={() => setCurrentScreen("registration-role")}
+                    >
+                      <Text style={styles.primaryButtonText}>登録する</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.secondaryButton}
+                      onPress={() => setCurrentScreen("login")}
+                    >
+                      <Text style={styles.secondaryButtonText}>ログインする</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </>
+          ) : (
           <View style={styles.stack}>
             <View style={styles.profileShell}>
-              <View style={styles.profileBanner} />
+              <ProfileBannerVisual
+                imageUri={profileState.coverUrl}
+                tone={profileState.name}
+              />
               <View style={styles.profileTopRow}>
                 <View style={styles.profileAvatar}>
-                  <DefaultAvatarIcon size={52} tone="light" />
+                  <AvatarVisual size={82} imageUri={profileState.avatarUrl} tone="light" />
                 </View>
                 <Pressable
                   style={styles.profileEditButton}
@@ -6716,80 +7107,114 @@ export default function App() {
               ) : null}
             </View>
           </View>
+          )}
         </ScrollView>
       ) : null}
 
       {currentScreen === "following-feed" ? (
         <ScrollView contentContainerStyle={styles.pageContainer}>
-          <PageIntro
-            title="フォロー中の投稿"
-            description="フォローしているユーザーのタイムライン投稿だけをまとめて確認できます。"
-          />
-          <View style={styles.stack}>
-            {followingFeedPosts.length === 0 ? (
-              <View style={styles.communityCard}>
-                <Text style={styles.cardTitle}>まだ投稿がありません</Text>
-                <Text style={styles.cardBody}>
-                  アカウントをフォローすると、ここにその人の投稿が表示されます。
-                </Text>
-              </View>
-            ) : null}
-            {followingFeedPosts.map((post) => {
-              const followingPostDisplay = extractDisplayBodyAndTags(post.body);
-              return (
-              <View key={post.id} style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <Pressable
-                    style={styles.authorRow}
-                    onPress={() =>
-                      openUserProfile({
-                        uid: post.createdByUid,
-                        name: post.author,
-                        role: post.role,
-                        handle: post.authorHandle,
-                        selectedSports: post.sports,
-                      })
-                    }
-                  >
-                    <View style={styles.authorAvatar}>
-                      <DefaultAvatarIcon size={28} />
-                    </View>
-                    <View style={styles.authorTextBlock}>
-                      <Text style={styles.cardTitle}>{post.title}</Text>
-                      <Text style={styles.cardMeta}>
-                        {post.author} ・ {post.role}
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <View style={styles.pill}>
-                    <Text style={styles.pillText}>フォロー中</Text>
+          {!authUser ? (
+            <>
+              <RegistrationHeader
+                title="フォロー中の投稿"
+                description="フォロー中の投稿一覧は登録またはログイン後に利用できます。ログインすると、気になるアカウントの投稿をまとめて確認できます。"
+                onBack={() => setCurrentScreen("top")}
+              />
+              <View style={styles.registrationCard}>
+                <View style={styles.registrationFlowCard}>
+                  <Text style={styles.registrationFlowText}>
+                    フォロー中の投稿一覧は、登録済みユーザー向けの機能です。ログインすると、フォローしたアカウントの投稿だけをまとめて確認できます。
+                  </Text>
+                  <View style={styles.inlineButtonRow}>
+                    <Pressable
+                      style={styles.primaryButton}
+                      onPress={() => setCurrentScreen("registration-role")}
+                    >
+                      <Text style={styles.primaryButtonText}>登録する</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.secondaryButton}
+                      onPress={() => setCurrentScreen("login")}
+                    >
+                      <Text style={styles.secondaryButtonText}>ログインする</Text>
+                    </Pressable>
                   </View>
                 </View>
-                <Pressable
-                  style={styles.detailTapArea}
-                  onPress={() =>
-                    openPostDetail({
-                      detail: buildFeedDetail(post),
-                      backScreen: "following-feed",
-                      })
-                  }
-                >
-                  {followingPostDisplay.bodyText ? (
-                    <ExpandableBody
-                      id={`following:${post.id}`}
-                      content={followingPostDisplay.bodyText}
-                      expanded={expandedBodyIds.includes(`following:${post.id}`)}
-                      onToggle={toggleExpandedBody}
-                      onOpenUrl={requestOpenExternalUrl}
-                    />
-                  ) : null}
-                  <MediaGallery media={post.media} />
-                  {renderHashtagChips(followingPostDisplay.tags)}
-                </Pressable>
-                <ReplyList replies={post.replies} />
               </View>
-            )})}
-          </View>
+            </>
+          ) : (
+            <>
+              <PageIntro
+                title="フォロー中の投稿"
+                description="フォローしているユーザーのタイムライン投稿だけをまとめて確認できます。"
+              />
+              <View style={styles.stack}>
+                {followingFeedPosts.length === 0 ? (
+                  <View style={styles.communityCard}>
+                    <Text style={styles.cardTitle}>まだ投稿がありません</Text>
+                    <Text style={styles.cardBody}>
+                      アカウントをフォローすると、ここにその人の投稿が表示されます。
+                    </Text>
+                  </View>
+                ) : null}
+                {followingFeedPosts.map((post) => {
+                  const followingPostDisplay = extractDisplayBodyAndTags(post.body);
+                  return (
+                  <View key={post.id} style={styles.postCard}>
+                    <View style={styles.postHeader}>
+                      <Pressable
+                        style={styles.authorRow}
+                        onPress={() =>
+                          openUserProfile({
+                            uid: post.createdByUid,
+                            name: post.author,
+                            role: post.role,
+                            handle: post.authorHandle,
+                            selectedSports: post.sports,
+                          })
+                        }
+                      >
+                        <View style={styles.authorAvatar}>
+                          <DefaultAvatarIcon size={28} />
+                        </View>
+                        <View style={styles.authorTextBlock}>
+                          <Text style={styles.cardTitle}>{post.title}</Text>
+                          <Text style={styles.cardMeta}>
+                            {post.author} ・ {post.role}
+                          </Text>
+                        </View>
+                      </Pressable>
+                      <View style={styles.pill}>
+                        <Text style={styles.pillText}>フォロー中</Text>
+                      </View>
+                    </View>
+                    <Pressable
+                      style={styles.detailTapArea}
+                      onPress={() =>
+                        openPostDetail({
+                          detail: buildFeedDetail(post),
+                          backScreen: "following-feed",
+                          })
+                      }
+                    >
+                      {followingPostDisplay.bodyText ? (
+                        <ExpandableBody
+                          id={`following:${post.id}`}
+                          content={followingPostDisplay.bodyText}
+                          expanded={expandedBodyIds.includes(`following:${post.id}`)}
+                          onToggle={toggleExpandedBody}
+                          onOpenUrl={requestOpenExternalUrl}
+                        />
+                      ) : null}
+                      <MediaGallery media={post.media} />
+                      {renderHashtagChips(followingPostDisplay.tags)}
+                    </Pressable>
+                    <ReplyList replies={post.replies} />
+                  </View>
+                )})}
+              </View>
+            </>
+          )}
         </ScrollView>
       ) : null}
 
@@ -6889,15 +7314,17 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.pageContainer}>
           <View style={styles.stack}>
             <View style={styles.profileShell}>
-              <View
-                style={[
-                  styles.profileBanner,
-                  { backgroundColor: selectedUserProfile.coverTone },
-                ]}
+              <ProfileBannerVisual
+                imageUri={selectedUserProfile.coverUrl}
+                tone={selectedUserProfile.name}
               />
               <View style={styles.profileTopRow}>
                 <View style={[styles.profileAvatar, styles.userProfileAvatar]}>
-                  <DefaultAvatarIcon size={52} tone="light" />
+                  <AvatarVisual
+                    size={82}
+                    imageUri={selectedUserProfile.avatarUrl}
+                    tone="light"
+                  />
                 </View>
                 <View style={styles.userProfileActions}>
                   <Pressable
@@ -7268,6 +7695,30 @@ export default function App() {
           {authMessage ? <FeedbackBanner kind="success" message={authMessage} /> : null}
           {authError ? <FeedbackBanner kind="error" message={authError} /> : null}
           <View style={styles.registrationCard}>
+            <ImageField
+              title="アイコン"
+              detail="任意項目"
+              imageUri={profileDraft.avatarUrl || null}
+              kind="avatar"
+              onPress={() => {
+                void pickImage("profile");
+              }}
+              onRemove={() => {
+                setProfileDraft((current) => ({ ...current, avatarUrl: "" }));
+              }}
+            />
+            <ImageField
+              title="ヘッダー画像"
+              detail="任意項目"
+              imageUri={profileDraft.coverUrl || null}
+              kind="cover"
+              onPress={() => {
+                void pickImage("profile-cover");
+              }}
+              onRemove={() => {
+                setProfileDraft((current) => ({ ...current, coverUrl: "" }));
+              }}
+            />
             <FormField
               label="表示名"
               detail="必須"
@@ -7395,9 +7846,21 @@ export default function App() {
               title="アイコン"
               detail="任意項目"
               imageUri={advisorIconUri}
+              kind="avatar"
               onPress={() => {
                 void pickImage("advisor");
               }}
+              onRemove={() => setAdvisorIconUri(null)}
+            />
+            <ImageField
+              title="ヘッダー画像"
+              detail="任意項目"
+              imageUri={advisorCoverUri}
+              kind="cover"
+              onPress={() => {
+                void pickImage("advisor-cover");
+              }}
+              onRemove={() => setAdvisorCoverUri(null)}
             />
             {advisorRegistrationFields.map((field) => (
               <FormField
@@ -7450,9 +7913,21 @@ export default function App() {
               title="アイコン"
               detail="任意項目"
               imageUri={coachIconUri}
+              kind="avatar"
               onPress={() => {
                 void pickImage("coach");
               }}
+              onRemove={() => setCoachIconUri(null)}
+            />
+            <ImageField
+              title="ヘッダー画像"
+              detail="任意項目"
+              imageUri={coachCoverUri}
+              kind="cover"
+              onPress={() => {
+                void pickImage("coach-cover");
+              }}
+              onRemove={() => setCoachCoverUri(null)}
             />
             {coachRegistrationFields.map((field) => (
               <FormField
@@ -8142,12 +8617,16 @@ function ImageField({
   title,
   detail,
   imageUri,
+  kind,
   onPress,
+  onRemove,
 }: {
   title: string;
   detail: string;
   imageUri: string | null;
+  kind: "avatar" | "cover";
   onPress: () => void;
+  onRemove?: () => void;
 }) {
   return (
     <View style={styles.formGroup}>
@@ -8157,16 +8636,30 @@ function ImageField({
       </View>
       <Pressable style={styles.imagePickerCard} onPress={onPress}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.avatarPreview} />
+          <Image
+            source={{ uri: imageUri }}
+            style={kind === "cover" ? styles.coverPreview : styles.avatarPreview}
+          />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarPlaceholderText}>画像を選択</Text>
             <Text style={styles.fieldSupport}>
-              デバイス内の写真からアイコン画像を設定します
+              {kind === "cover"
+                ? "デバイス内の写真からプロフィール上部のヘッダー画像を設定します"
+                : "デバイス内の写真からアイコン画像を設定します"}
             </Text>
           </View>
         )}
       </Pressable>
+      {imageUri && onRemove ? (
+        <Pressable style={styles.removeImageButton} onPress={onRemove}>
+          <Text style={styles.removeImageButtonText}>
+            {kind === "cover"
+              ? "ヘッダー画像を削除してデフォルトに戻す"
+              : "アイコン画像を削除してデフォルトに戻す"}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -8397,6 +8890,58 @@ const DefaultAvatarIcon = ({
         }}
       />
     </View>
+  );
+};
+
+const AvatarVisual = ({
+  size,
+  imageUri,
+  tone = "brand",
+}: {
+  size: number;
+  imageUri?: string;
+  tone?: "brand" | "light";
+}) => {
+  if (imageUri) {
+    return (
+      <Image
+        source={{ uri: imageUri }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: 999,
+        }}
+      />
+    );
+  }
+
+  return <DefaultAvatarIcon size={size} tone={tone} />;
+};
+
+const ProfileBannerVisual = ({
+  imageUri,
+  tone,
+}: {
+  imageUri?: string;
+  tone: string;
+}) => {
+  if (imageUri) {
+    return (
+      <Image
+        source={{ uri: imageUri }}
+        style={styles.profileBannerImage}
+        resizeMode="cover"
+      />
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.profileBanner,
+        { backgroundColor: createCoverToneFromName(tone) },
+      ]}
+    />
   );
 };
 
@@ -9165,6 +9710,23 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 180,
   },
+  coverPreview: {
+    width: "100%",
+    height: 180,
+  },
+  removeImageButton: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.errorSoft,
+  },
+  removeImageButtonText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   input: {
     minHeight: 52,
     borderRadius: 16,
@@ -9613,6 +10175,10 @@ const styles = StyleSheet.create({
     height: 180,
     backgroundColor: "#d8c7ad",
   },
+  profileBannerImage: {
+    width: "100%",
+    height: 180,
+  },
   profileTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -9674,6 +10240,7 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   profileAvatarText: {
     color: "#fff7ed",
