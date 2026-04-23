@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Komonity",
+    "slug": "advisor-community-service",
+    "scheme": "advisorcommunity",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

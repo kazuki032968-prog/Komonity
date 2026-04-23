@@ -1,0 +1,21 @@
+<svg width="960" height="320" viewBox="0 0 960 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="320" rx="40" fill="#FFFDF8"/>
+  <path d="M118 233C182 253 278 261 370 250C474 238 563 199 648 207C706 212 762 238 824 237" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
+  <path d="M764 233C782 228 796 220 809 207" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
+  <text
+    x="84"
+    y="182"
+    fill="#B45309"
+    font-size="120"
+    font-weight="700"
+    font-style="italic"
+    letter-spacing="1.5"
+    transform="rotate(-4 84 182)"
+    style="font-family:'Brush Script MT','Segoe Script','Snell Roundhand',cursive;"
+  >
+    Komonity
+  </text>
+  <circle cx="678" cy="84" r="10" fill="#0F766E"/>
+  <circle cx="712" cy="64" r="8" fill="#B45309"/>
+  <circle cx="736" cy="90" r="6" fill="#0F766E"/>
+</svg>
