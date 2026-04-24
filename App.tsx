@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image,
   Linking,
@@ -16,7 +16,9 @@ import {
 } from "react-native";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User,
@@ -31,1552 +33,190 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  type DocumentData,
+  updateDoc,
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { auth, db, hasFirebaseConfig as hasAuthConfig, storage } from "./src/lib/firebase";
-
-type ScreenKey =
-  | "top"
-  | "feed"
-  | "post-detail"
-  | "reply-detail"
-  | "following-feed"
-  | "relationship-list"
-  | "questions"
-  | "experts"
-  | "community"
-  | "mypage"
-  | "user-profile"
-  | "notifications"
-  | "search"
-  | "post-compose"
-  | "profile-edit"
-  | "registration-role"
-  | "advisor-registration"
-  | "coach-registration"
-  | "login";
-
-type ExternalLink = {
-  id: string;
-  label: string;
-  url: string;
-};
-
-type AdvisorFormState = {
-  nickname: string;
-  handle: string;
-  club: string;
-  experience: string;
-  loginEmail: string;
-  loginPassword: string;
-  selectedSports: string[];
-};
-
-type CoachFormState = {
-  nickname: string;
-  handle: string;
-  specialty: string;
-  experience: string;
-  achievements: string;
-  phone: string;
-  publicEmail: string;
-  loginEmail: string;
-  loginPassword: string;
-  selectedSports: string[];
-};
-
-type LoginFormState = {
-  email: string;
-  password: string;
-};
-
-type ProfileState = {
-  name: string;
-  handle: string;
-  role: string;
-  bio: string;
-  link: string;
-  avatarUrl: string;
-  coverUrl: string;
-  externalLinks: ExternalLink[];
-  joined: string;
-  following: string;
-  followers: string;
-  posts: string;
-  selectedSports: string[];
-};
-type UserProfileState = ProfileState & {
-  uid?: string;
-  avatarLabel: string;
-  verified?: boolean;
-  coverTone: string;
-};
-
-type SearchTabKey = "trending-posts" | "recent" | "accounts";
-type SearchContentFilterKey = "all" | "feed" | "questions" | "community";
-type Reply = {
-  id: string;
-  author: string;
-  authorHandle?: string;
-  createdByUid?: string;
-  body: string;
-  media?: MediaAttachment[];
-  replies?: Reply[];
-};
-type MediaKind = "image" | "video";
-type MediaAttachment = {
-  kind: MediaKind;
-  url: string;
-  fileName: string;
-  mimeType?: string;
-  storagePath?: string;
-  width?: number;
-  height?: number;
-};
-type LocalMediaAsset = {
-  id: string;
-  uri: string;
-  kind: MediaKind;
-  fileName: string;
-  mimeType?: string;
-  width?: number;
-  height?: number;
-  sizeBytes?: number;
-};
-type FeedPost = {
-  id: string;
-  author: string;
-  role: string;
-  title: string;
-  body: string;
-  tags: string[];
-  sports: string[];
-  likes: number;
-  reposts: number;
-  comments: number;
-  replies: Reply[];
-  media?: MediaAttachment[];
-  createdByUid?: string;
-  authorHandle?: string;
-  createdAtMs?: number;
-};
-type QuestionPost = {
-  id: string;
-  category: string;
-  title: string;
-  body: string;
-  author: string;
-  answers: number;
-  bestAnswer: string;
-  replies: Reply[];
-  media?: MediaAttachment[];
-  createdByUid?: string;
-  authorHandle?: string;
-  bestAnswerReplyId?: string;
-  createdAtMs?: number;
-};
-type CommunityPost = {
-  id: string;
-  title: string;
-  author: string;
-  body: string;
-  cta: string;
-  replies: Reply[];
-  media?: MediaAttachment[];
-  createdByUid?: string;
-  authorHandle?: string;
-  createdAtMs?: number;
-};
-type FollowRecord = {
-  id: string;
-  followerUid: string;
-  followingUid: string;
-};
-type BlockRecord = {
-  id: string;
-  blockerUid: string;
-  blockedUid: string;
-};
-type PostAlertRecord = {
-  id: string;
-  watcherUid: string;
-  targetUid: string;
-};
-type InteractionRecord = {
-  id: string;
-  userUid: string;
-  postId: string;
-  source: SearchContentFilterKey;
-  createdAtMs?: number;
-};
-type ComposeTarget = "feed" | "questions" | "community";
-type ComposeState = {
-  target: ComposeTarget;
-  title: string;
-  body: string;
-  selectedSports: string[];
-};
-type SearchContentItem = {
-  id: string;
-  source: SearchContentFilterKey;
-  sourceLabel: string;
-  author: string;
-  authorHandle?: string;
-  createdByUid?: string;
-  role: string;
-  title: string;
-  body: string;
-  sports: string[];
-  tags: string[];
-  replies: Reply[];
-  media?: MediaAttachment[];
-  score: number;
-  createdAtMs?: number;
-};
-type SearchAccountItem = {
-  id: string;
-  name: string;
-  handle: string;
-  bio: string;
-  avatarUrl?: string;
-  followers: string;
-  featured: boolean;
-  role: string;
-  selectedSports: string[];
-};
-type UserDirectoryMeta = {
-  externalLinks: ExternalLink[];
-  iconUrl?: string;
-  coverUrl?: string;
-  pinnedPostId?: string;
-  pinnedPostSource?: SearchContentFilterKey;
-};
-type ProfileTabKey = "posts" | "answers" | "best_answers";
-type PostDetailState = {
-  id: string;
-  source: SearchContentFilterKey;
-  sourceLabel: string;
-  author: string;
-  authorHandle?: string;
-  createdByUid?: string;
-  role: string;
-  title: string;
-  body: string;
-  media?: MediaAttachment[];
-  replies: Reply[];
-  likes?: number;
-  reposts?: number;
-  comments?: number;
-  answers?: number;
-  bestAnswer?: string;
-  bestAnswerReplyId?: string;
-  sports: string[];
-  tags: string[];
-  createdAtMs?: number;
-};
-type RelationshipListState = {
-  mode: "following" | "followers";
-  title: string;
-  accounts: SearchAccountItem[];
-  backScreen: "mypage" | "user-profile";
-};
-type ReplyDetailState = {
-  rootPostId: string;
-  source: SearchContentFilterKey;
-  sourceLabel: string;
-  path: string[];
-  reply: Reply;
-  backScreen: ScreenKey;
-};
-
-type TextSelectionRange = {
-  start: number;
-  end: number;
-};
-
-type RichFormatAction = "bold" | "bullet" | "quote";
-
-type ProfilePostItem = SearchContentItem & {
-  displayRole?: string;
-  sortTimestampMs?: number;
-};
-type ProfileAnswerItem = {
-  id: string;
-  sourceLabel: string;
-  parentTitle: string;
-  body: string;
-};
-
-type TrendingCoachItem = SearchAccountItem & {
-  likes: number;
-  reposts: number;
-  bookmarks: number;
-  bestAnswers: number;
-  lastActivityDays: number;
-  score: number;
-};
-
-type BadgeTier = "bronze" | "silver" | "gold";
-type ActivityBadge = {
-  id: string;
-  label: string;
-  tier: BadgeTier;
-  description: string;
-};
-type BadgeModalState = {
-  title: string;
-  badges: ActivityBadge[];
-};
-type ExternalLinkModalState = {
-  visible: boolean;
-  url: string;
-  label: string;
-};
-type NotificationItem = {
-  id: string;
-  kind: "like" | "reply" | "bookmark" | "repost" | "new-post";
-  title: string;
-  body: string;
-  createdAtMs: number;
-  postDetail?: PostDetailState;
-};
-type UserActivitySummary = {
-  postCount: number;
-  postingStreakDays: number;
-  followerCount: number;
-  likesReceived: number;
-  repostsReceived: number;
-  bookmarksReceived: number;
-  repliesReceived: number;
-  repliesSent: number;
-  bestAnswers: number;
-  profileCompletionScore: number;
-  badges: ActivityBadge[];
-};
-
-const sportGroups = [
-  {
-    category: "球技",
-    items: [
-      "サッカー",
-      "野球",
-      "ソフトボール",
-      "バスケットボール",
-      "バレーボール",
-      "テニス",
-      "ソフトテニス",
-      "バドミントン",
-      "卓球",
-      "ラグビー",
-      "ハンドボール",
-    ],
-  },
-  {
-    category: "武道・競技",
-    items: ["陸上", "駅伝", "水泳", "体操", "剣道", "柔道", "空手道", "弓道", "登山"],
-  },
-  {
-    category: "パフォーマンス",
-    items: ["ダンス", "チア", "吹奏楽", "合唱", "軽音楽", "演劇", "放送"],
-  },
-  {
-    category: "創作・芸術",
-    items: ["美術", "書道", "写真", "茶道", "華道", "文芸"],
-  },
-  {
-    category: "学術・文化",
-    items: [
-      "科学",
-      "家庭科",
-      "料理",
-      "英語",
-      "囲碁",
-      "将棋",
-      "新聞",
-      "パソコン",
-      "eスポーツ",
-      "ボランティア",
-      "その他",
-    ],
-  },
-];
-
-const registrationOptions = [
-  {
-    id: "advisor",
-    title: "顧問として登録",
-    description:
-      "相談投稿、ベストアンサーの保存、参考になった指導者のフォロー、マイページでの活動管理ができます。",
-  },
-  {
-    id: "coach",
-    title: "指導員として登録",
-    description:
-      "経歴や実績を公開し、毎日のメニュー投稿や回答を通じて信頼を積み上げられます。",
-  },
-] as const;
-
-const advisorRegistrationFields = [
-  { label: "ニックネーム", detail: "必須", placeholder: "例: バスケ顧問A / みどり先生" },
-  { label: "表示ID", detail: "必須", placeholder: "例: @midori_teacher" },
-  { label: "担当部活", detail: "必須", placeholder: "例: 女子バスケットボール部" },
-  { label: "担当歴", detail: "必須", placeholder: "例: 6年" },
-  {
-    label: "ログイン用メールアドレス",
-    detail: "必須 / 非公開",
-    placeholder: "例: advisor@example.com",
-  },
-  {
-    label: "ログイン用パスワード",
-    detail: "必須 / 非公開",
-    placeholder: "8文字以上のパスワード",
-  },
-] as const;
-
-const coachRegistrationFields = [
-  { label: "ニックネーム", detail: "必須", placeholder: "例: 山本 真理 / Coach Mari" },
-  { label: "表示ID", detail: "必須", placeholder: "例: @coach_mari" },
-  { label: "専門種目", detail: "必須", placeholder: "例: バスケットボール" },
-  { label: "指導歴", detail: "必須", placeholder: "例: 12年" },
-  {
-    label: "今までの経歴や功績",
-    detail: "必須",
-    placeholder: "例: 全国大会出場3回、指導者研修講師など",
-  },
-  {
-    label: "電話番号",
-    detail: "任意項目 / 入力すると公開",
-    placeholder: "例: 090-1234-5678",
-  },
-  {
-    label: "メールアドレス",
-    detail: "任意項目 / 入力すると公開",
-    placeholder: "例: coach@example.com",
-  },
-  {
-    label: "ログイン用メールアドレス",
-    detail: "必須 / 非公開",
-    placeholder: "例: login@example.com",
-  },
-  {
-    label: "ログイン用パスワード",
-    detail: "必須 / 非公開",
-    placeholder: "8文字以上のパスワード",
-  },
-] as const;
-
-const defaultProfileState: ProfileState = {
-  name: "Komonityユーザー",
-  handle: "@komonity_user",
-  role: "未登録",
-  bio: "プロフィールを登録すると、投稿や回答、コミュニティ機能を利用できます。",
-  link: "komonity.jp/profile",
-  avatarUrl: "",
-  coverUrl: "",
-  externalLinks: [],
-  joined: "Komonityへようこそ",
-  following: "0",
-  followers: "0",
-  posts: "0",
-  selectedSports: [],
-};
-
-const myPageTabs = [
-  { key: "posts", label: "投稿" },
-  { key: "answers", label: "回答" },
-  { key: "best_answers", label: "ベストアンサー" },
-] as const;
-
-const searchTabs = [
-  { key: "trending-posts", label: "話題の投稿" },
-  { key: "recent", label: "最近" },
-  { key: "accounts", label: "アカウント" },
-] as const;
-
-const initialFeedPosts: FeedPost[] = [];
-const initialQuestions: QuestionPost[] = [];
-const initialCommunityItems: CommunityPost[] = [];
-
-const getAvailablePostTargets = (role: string) => {
-  if (role.includes("指導員")) {
-    return [{ key: "feed" as const, label: "タイムライン" }];
-  }
-
-  return [
-    { key: "questions" as const, label: "相談広場" },
-    { key: "community" as const, label: "コミュニティ" },
-  ];
-};
-
-const COLLECTIONS = {
-  feed: "timeline_posts",
-  questions: "question_posts",
-  community: "community_posts",
-  follows: "follows",
-  blocks: "blocks",
-  likes: "post_likes",
-  reposts: "post_reposts",
-  bookmarks: "post_bookmarks",
-  alerts: "post_alerts",
-  reports: "spam_reports",
-} as const;
-
-const POST_TITLE_MAX_LENGTH = 100;
-const POST_BODY_MAX_LENGTH = 2000;
-const REPLY_BODY_MAX_LENGTH = 2000;
-const INITIAL_SELECTION: TextSelectionRange = { start: 0, end: 0 };
-const INITIAL_BADGE_MODAL_STATE: BadgeModalState = {
-  title: "",
-  badges: [],
-};
-const INITIAL_EXTERNAL_LINK_MODAL_STATE: ExternalLinkModalState = {
-  visible: false,
-  url: "",
-  label: "",
-};
-
-const mergeItemsById = <T extends { id: string }>(baseItems: T[], cloudItems: T[]) => {
-  const merged = new Map<string, T>();
-
-  cloudItems.forEach((item) => {
-    merged.set(item.id, item);
-  });
-  baseItems.forEach((item) => {
-    if (!merged.has(item.id)) {
-      merged.set(item.id, item);
-    }
-  });
-
-  return Array.from(merged.values());
-};
-
-const normalizeReplies = (value: unknown): Reply[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.reduce<Reply[]>((accumulator, reply, index) => {
-      const item = reply as Partial<Reply> | undefined;
-      if (!item?.author || !item?.body) {
-        return accumulator;
-      }
-
-      accumulator.push({
-        id: item.id ?? `reply-${index}`,
-        author: item.author,
-        authorHandle:
-          typeof item.authorHandle === "string" ? item.authorHandle : undefined,
-        createdByUid:
-          typeof item.createdByUid === "string" ? item.createdByUid : undefined,
-        body: item.body,
-        media: normalizeMedia(item.media),
-        replies: normalizeReplies(item.replies),
-      });
-
-      return accumulator;
-    }, []);
-};
-
-const toArrayOfStrings = (value: unknown) => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((item): item is string => typeof item === "string");
-};
-
-const normalizeMedia = (value: unknown): MediaAttachment[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const normalized: MediaAttachment[] = [];
-
-  value.forEach((item) => {
-    const media = item as Partial<MediaAttachment> | undefined;
-    if (
-      !media ||
-      (media.kind !== "image" && media.kind !== "video") ||
-      typeof media.url !== "string" ||
-      typeof media.fileName !== "string"
-    ) {
-      return;
-    }
-
-    normalized.push({
-      kind: media.kind,
-      url: media.url,
-      fileName: media.fileName,
-      mimeType: media.mimeType,
-      storagePath: media.storagePath,
-      width: media.width,
-      height: media.height,
-    });
-  });
-
-  return normalized;
-};
-
-const serializeMediaForFirestore = (media?: MediaAttachment[]) => {
-  if (!media || media.length === 0) {
-    return [];
-  }
-
-  return media.map((item) => {
-    const serialized: Record<string, unknown> = {
-      kind: item.kind,
-      url: item.url,
-      fileName: item.fileName,
-    };
-
-    if (item.mimeType) {
-      serialized.mimeType = item.mimeType;
-    }
-    if (item.storagePath) {
-      serialized.storagePath = item.storagePath;
-    }
-    if (typeof item.width === "number") {
-      serialized.width = item.width;
-    }
-    if (typeof item.height === "number") {
-      serialized.height = item.height;
-    }
-
-    return serialized;
-  });
-};
-
-const serializeRepliesForFirestore = (replies: Reply[]) =>
-  replies.map((reply) => {
-    const serialized: Record<string, unknown> = {
-      id: reply.id,
-      author: reply.author,
-      body: reply.body,
-      media: serializeMediaForFirestore(reply.media),
-      replies: serializeRepliesForFirestore(reply.replies ?? []),
-    };
-
-    if (reply.authorHandle) {
-      serialized.authorHandle = reply.authorHandle;
-    }
-    if (reply.createdByUid) {
-      serialized.createdByUid = reply.createdByUid;
-    }
-
-    return serialized;
-  });
-
-const createHandleFromName = (name: string) =>
-  `@${name.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_]/gu, "").toLowerCase()}`;
-
-const normalizeHandle = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  const sanitized = trimmed
-    .replace(/^@+/u, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^\p{L}\p{N}_]/gu, "")
-    .toLowerCase();
-
-  return sanitized ? `@${sanitized}` : "";
-};
-
-const normalizeHashtagLabel = (value: string) =>
-  value
-    .trim()
-    .replace(/^#+/u, "")
-    .replace(/[!-/:-@[-`{-~]+$/u, "");
-
-const URL_REGEX = /(https?:\/\/[^\s)]+)(?![^[]*\])/giu;
-const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/giu;
-const LIST_BODY_COLLAPSE_LENGTH = 220;
-
-const formatFileSizeLabel = (bytes: number) => {
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-  }
-
-  return `${Math.ceil(bytes / 1024)}KB`;
-};
-
-const getMediaSizeLimit = (kind: MediaKind) =>
-  kind === "video" ? VIDEO_FILE_SIZE_LIMIT_BYTES : IMAGE_FILE_SIZE_LIMIT_BYTES;
-
-const extractFirstUrl = (content: string) => {
-  const markdownMatch = MARKDOWN_LINK_REGEX.exec(content);
-  MARKDOWN_LINK_REGEX.lastIndex = 0;
-  if (markdownMatch?.[2]) {
-    return markdownMatch[2];
-  }
-
-  const urlMatch = URL_REGEX.exec(content);
-  URL_REGEX.lastIndex = 0;
-  return urlMatch?.[1] ?? null;
-};
-
-const removeUrlsForPreviewLabel = (value: string) =>
-  value
-    .replace(MARKDOWN_LINK_REGEX, "$1")
-    .replace(URL_REGEX, "")
-    .trim();
-
-const buildUrlPreviewLabel = (url: string) => {
-  try {
-    const hostname = new URL(url).hostname.replace(/^www\./u, "");
-    return hostname;
-  } catch {
-    return "外部サイト";
-  }
-};
-
-const shouldCollapseBody = (content: string) => content.length > LIST_BODY_COLLAPSE_LENGTH;
-
-const getCollapsedBody = (content: string) =>
-  `${content.slice(0, LIST_BODY_COLLAPSE_LENGTH).trimEnd()}...`;
-
-const extractDisplayBodyAndTags = (body: string) => {
-  const inlineTags: string[] = [];
-  const bodyText = body
-    .split("\n")
-    .map((line) =>
-      line
-        .split(/\s+/)
-        .filter((token) => {
-          if (!token.startsWith("#")) {
-            return true;
-          }
-
-          const normalized = normalizeHashtagLabel(token);
-          if (!normalized) {
-            return true;
-          }
-
-          inlineTags.push(normalized);
-          return false;
-        })
-        .join(" ")
-        .trim()
-    )
-    .join("\n")
-    .trim();
-
-  return {
-    bodyText,
-    tags: Array.from(
-      new Set(inlineTags.map((tag) => normalizeHashtagLabel(tag)).filter(Boolean))
-    ),
-  };
-};
-
-const getDaysSinceTimestamp = (timestampMs?: number) => {
-  if (!timestampMs) {
-    return 0;
-  }
-
-  return Math.max(0, (Date.now() - timestampMs) / (1000 * 60 * 60 * 24));
-};
-
-const getDecayMultiplier = (
-  source: SearchContentFilterKey,
-  timestampMs?: number
-) => {
-  const days = getDaysSinceTimestamp(timestampMs);
-
-  if (days <= 1) {
-    return 1;
-  }
-  if (days <= 3) {
-    return source === "questions" ? 0.9 : 0.8;
-  }
-  if (days <= 7) {
-    return source === "questions" ? 0.75 : 0.6;
-  }
-
-  return source === "questions" ? 0.55 : 0.3;
-};
-
-const getTrendingScore = ({
-  source,
-  baseScore,
-  createdAtMs,
-  hasBestAnswer,
-}: {
-  source: SearchContentFilterKey;
-  baseScore: number;
-  createdAtMs?: number;
-  hasBestAnswer?: boolean;
-}) => {
-  const decayMultiplier = getDecayMultiplier(source, createdAtMs);
-  const bestAnswerBonus = source === "questions" && hasBestAnswer ? 1.15 : 1;
-
-  return baseScore * decayMultiplier * bestAnswerBonus;
-};
-
-const formatCount = (value: number) => value.toLocaleString("ja-JP");
-
-const parseFollowerCount = (value: string) => {
-  const normalized = value.replace(/,/g, "").trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getAccountSearchScore = (account: Pick<SearchAccountItem, "name" | "handle" | "bio">, query: string) => {
-  if (!query) {
-    return 0;
-  }
-
-  const name = account.name.toLowerCase();
-  const handle = account.handle.toLowerCase();
-  const bio = account.bio.toLowerCase();
-
-  if (name === query || handle === query) {
-    return 100;
-  }
-  if (name.startsWith(query) || handle.startsWith(query)) {
-    return 80;
-  }
-  if (name.includes(query) || handle.includes(query)) {
-    return 60;
-  }
-  if (bio.startsWith(query)) {
-    return 40;
-  }
-  if (bio.includes(query)) {
-    return 20;
-  }
-
-  return 0;
-};
-
-const getTrendingCoachScore = ({
-  followers,
-  likes,
-  reposts,
-  bookmarks,
-  bestAnswers,
-  lastActivityDays,
-}: {
-  followers: number;
-  likes: number;
-  reposts: number;
-  bookmarks: number;
-  bestAnswers: number;
-  lastActivityDays: number;
-}) =>
-  followers * 1 +
-  likes * 2 +
-  reposts * 3 +
-  bookmarks * 3 +
-  bestAnswers * 8 -
-  lastActivityDays * 5;
-
-const countRepliesRecursively = (replies: Reply[]): number =>
-  replies.reduce(
-    (total, reply) => total + 1 + countRepliesRecursively(reply.replies ?? []),
-    0
-  );
-
-const getPostingStreakDays = (timestamps: number[]) => {
-  if (timestamps.length === 0) {
-    return 0;
-  }
-
-  const uniqueDays = Array.from(
-    new Set(
-      timestamps
-        .filter(Boolean)
-        .map((timestamp) => {
-          const date = new Date(timestamp);
-          return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-        })
-    )
-  ).sort((left, right) => right - left);
-
-  if (uniqueDays.length === 0) {
-    return 0;
-  }
-
-  let streak = 1;
-  for (let index = 1; index < uniqueDays.length; index += 1) {
-    const previousDay = uniqueDays[index - 1];
-    const currentDay = uniqueDays[index];
-    const diffDays = (previousDay - currentDay) / (1000 * 60 * 60 * 24);
-
-    if (diffDays === 1) {
-      streak += 1;
-      continue;
-    }
-
-    break;
-  }
-
-  return streak;
-};
-
-const getProfileCompletionScore = (profile: Pick<ProfileState, "bio" | "link" | "selectedSports" | "handle">) => {
-  let score = 0;
-
-  if (profile.handle.trim()) {
-    score += 1;
-  }
-  if (profile.bio.trim()) {
-    score += 1;
-  }
-  if (profile.link.trim()) {
-    score += 1;
-  }
-  if (profile.selectedSports.length >= 1) {
-    score += 1;
-  }
-  if (profile.selectedSports.length >= 2 || profile.bio.trim().length >= 80) {
-    score += 1;
-  }
-
-  return score;
-};
-
-const createTieredBadge = ({
-  id,
-  label,
-  description,
-  value,
-  bronze,
-  silver,
-  gold,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  value: number;
-  bronze: number;
-  silver: number;
-  gold: number;
-}): ActivityBadge | null => {
-  if (value >= gold) {
-    return { id, label, description, tier: "gold" };
-  }
-  if (value >= silver) {
-    return { id, label, description, tier: "silver" };
-  }
-  if (value >= bronze) {
-    return { id, label, description, tier: "bronze" };
-  }
-
-  return null;
-};
-
-const applyRichFormatting = (
-  value: string,
-  selection: TextSelectionRange,
-  action: RichFormatAction
-) => {
-  const start = Math.max(0, Math.min(selection.start, selection.end, value.length));
-  const end = Math.max(0, Math.max(selection.start, selection.end, 0));
-  const selectedText = value.slice(start, Math.min(end, value.length));
-
-  const insertOrWrap = (replacement: string) => ({
-    value: `${value.slice(0, start)}${replacement}${value.slice(Math.min(end, value.length))}`,
-    selection: {
-      start: start + replacement.length,
-      end: start + replacement.length,
-    },
-  });
-
-  if (action === "bold") {
-    return insertOrWrap(selectedText ? `**${selectedText}**` : "****");
-  }
-
-  const sourceText = selectedText || "";
-  const lines = sourceText.split("\n");
-
-  if (action === "quote") {
-    return insertOrWrap(lines.map((line) => `> ${line}`).join("\n") || "> ");
-  }
-
-  return insertOrWrap(lines.map((line) => `- ${line}`).join("\n") || "- ");
-};
-
-const renderLinkableTextSegments = ({
-  text,
-  baseStyle,
-  boldStyle,
-  linkStyle,
-  onOpenUrl,
-}: {
-  text: string;
-  baseStyle: object;
-  boldStyle: object;
-  linkStyle: object;
-  onOpenUrl: (url: string, label?: string) => void;
-}) => {
-  const output: React.ReactNode[] = [];
-  let cursor = 0;
-
-  const pushPlainText = (segment: string, keyPrefix: string, isBold: boolean) => {
-    if (!segment) {
-      return;
-    }
-
-    let plainCursor = 0;
-    const markdownMatches = Array.from(segment.matchAll(MARKDOWN_LINK_REGEX));
-    markdownMatches.forEach((match, index) => {
-      const full = match[0] ?? "";
-      const label = match[1] ?? "";
-      const url = match[2] ?? "";
-      const matchIndex = match.index ?? 0;
-
-      if (matchIndex > plainCursor) {
-        const before = segment.slice(plainCursor, matchIndex);
-        if (before) {
-          output.push(
-            <Text
-              key={`${keyPrefix}-plain-${index}-${plainCursor}`}
-              style={isBold ? [baseStyle, boldStyle] : baseStyle}
-            >
-              {before}
-            </Text>
-          );
-        }
-      }
-
-      output.push(
-        <Text
-          key={`${keyPrefix}-markdown-${index}`}
-          style={isBold ? [baseStyle, boldStyle, linkStyle] : [baseStyle, linkStyle]}
-          onPress={() => onOpenUrl(url, label)}
-        >
-          {label}
-        </Text>
-      );
-      plainCursor = matchIndex + full.length;
-    });
-
-    const remainingText = segment.slice(plainCursor);
-    let rawCursor = 0;
-    const rawMatches = Array.from(remainingText.matchAll(URL_REGEX));
-    rawMatches.forEach((match, index) => {
-      const url = match[1] ?? "";
-      const matchIndex = match.index ?? 0;
-      if (matchIndex > rawCursor) {
-        const before = remainingText.slice(rawCursor, matchIndex);
-        if (before) {
-          output.push(
-            <Text
-              key={`${keyPrefix}-raw-plain-${index}-${rawCursor}`}
-              style={isBold ? [baseStyle, boldStyle] : baseStyle}
-            >
-              {before}
-            </Text>
-          );
-        }
-      }
-
-      output.push(
-        <Text
-          key={`${keyPrefix}-raw-link-${index}`}
-          style={isBold ? [baseStyle, boldStyle, linkStyle] : [baseStyle, linkStyle]}
-          onPress={() => onOpenUrl(url)}
-        >
-          {url}
-        </Text>
-      );
-      rawCursor = matchIndex + url.length;
-    });
-
-    const tail = remainingText.slice(rawCursor);
-    if (tail) {
-      output.push(
-        <Text
-          key={`${keyPrefix}-tail-${rawCursor}`}
-          style={isBold ? [baseStyle, boldStyle] : baseStyle}
-        >
-          {tail}
-        </Text>
-      );
-    }
-  };
-
-  text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).forEach((segment, index) => {
-    const isBold = segment.startsWith("**") && segment.endsWith("**");
-    const displayText = isBold ? segment.slice(2, -2) : segment;
-    pushPlainText(displayText, `seg-${index}`, isBold);
-    cursor += displayText.length;
-  });
-
-  return output;
-};
-
-const createCoverToneFromName = (name: string) => {
-  const tones = ["#d8c7ad", "#d6d9c4", "#c8ddd7", "#dfc6c0"];
-  const total = Array.from(name).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[total % tones.length];
-};
-
-const getRoleLabel = (roleKeyOrLabel: string) => {
-  if (roleKeyOrLabel === "advisor" || roleKeyOrLabel.includes("顧問")) {
-    return "顧問アカウント";
-  }
-
-  if (roleKeyOrLabel === "coach" || roleKeyOrLabel.includes("指導員")) {
-    return "指導員アカウント";
-  }
-
-  return roleKeyOrLabel || "Komonityユーザー";
-};
-
-const formatJoinedLabel = (value: unknown) => {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "toDate" in value &&
-    typeof value.toDate === "function"
-  ) {
-    const date = value.toDate() as Date;
-    return `${date.getFullYear()}年${date.getMonth() + 1}月からKomonityを利用`;
-  }
-
-  if (typeof value === "string" && value) {
-    return value;
-  }
-
-  return defaultProfileState.joined;
-};
-
-const mapUserDocumentToProfileState = (data: DocumentData): ProfileState => {
-  const profile = typeof data.profile === "object" && data.profile ? data.profile : {};
-  const profileData = profile as Record<string, unknown>;
-  const roleLabel = getRoleLabel(
-    typeof data.roleLabel === "string" ? data.roleLabel : String(data.role ?? "")
-  );
-  const name =
-    typeof profileData.nickname === "string" && profileData.nickname
-      ? profileData.nickname
-      : defaultProfileState.name;
-  const rawExternalLinks = Array.isArray(profileData.externalLinks)
-    ? profileData.externalLinks
-    : [];
-  const externalLinks = rawExternalLinks.reduce<ExternalLink[]>((accumulator, item, index) => {
-    if (typeof item !== "object" || item === null) {
-      return accumulator;
-    }
-
-    const link = item as { label?: unknown; url?: unknown };
-    accumulator.push({
-      id: String(index + 1),
-      label: typeof link.label === "string" ? link.label : "",
-      url: typeof link.url === "string" ? link.url : "",
-    });
-    return accumulator;
-  }, []);
-
-  return {
-    name,
-    handle:
-      typeof profileData.handle === "string" && profileData.handle
-        ? profileData.handle
-        : createHandleFromName(name),
-    role: roleLabel,
-    bio:
-      typeof profileData.bio === "string" && profileData.bio
-        ? profileData.bio
-        : defaultProfileState.bio,
-    link:
-      typeof profileData.link === "string" && profileData.link
-        ? profileData.link
-        : defaultProfileState.link,
-    avatarUrl:
-      typeof profileData.iconUrl === "string" && profileData.iconUrl
-        ? profileData.iconUrl
-        : defaultProfileState.avatarUrl,
-    coverUrl:
-      typeof profileData.coverUrl === "string" && profileData.coverUrl
-        ? profileData.coverUrl
-        : defaultProfileState.coverUrl,
-    externalLinks:
-      externalLinks.length > 0 ? externalLinks : defaultProfileState.externalLinks,
-    joined: formatJoinedLabel(data.createdAt),
-    following:
-      typeof profileData.following === "string" && profileData.following
-        ? profileData.following
-        : defaultProfileState.following,
-    followers:
-      typeof profileData.followers === "string" && profileData.followers
-        ? profileData.followers
-        : defaultProfileState.followers,
-    posts:
-      typeof profileData.posts === "string" && profileData.posts
-        ? profileData.posts
-        : defaultProfileState.posts,
-    selectedSports:
-      toArrayOfStrings(profileData.selectedSports).length > 0
-        ? toArrayOfStrings(profileData.selectedSports)
-        : defaultProfileState.selectedSports,
-  };
-};
-
-const userMatchesProfile = ({
-  uid,
-  name,
-  targetUid,
-  targetName,
-}: {
-  uid?: string;
-  name: string;
-  targetUid?: string;
-  targetName: string;
-}) => {
-  if (targetUid) {
-    return uid === targetUid || (!uid && name === targetName);
-  }
-
-  return name === targetName;
-};
-
-const replyMatchesProfile = ({
-  author,
-  targetName,
-}: {
-  author: string;
-  targetName: string;
-}) => author === targetName;
-
-const buildFeedDetail = (post: FeedPost): PostDetailState => ({
-  id: post.id,
-  source: "feed",
-  sourceLabel: "タイムライン",
-  author: post.author,
-  authorHandle: post.authorHandle,
-  createdByUid: post.createdByUid,
-  role: post.role,
-  title: post.title,
-  body: post.body,
-  media: post.media,
-  replies: post.replies,
-  likes: post.likes,
-  reposts: post.reposts,
-  comments: post.comments,
-  sports: post.sports,
-  tags: post.tags,
-  createdAtMs: post.createdAtMs,
-});
-
-const buildQuestionDetail = (question: QuestionPost): PostDetailState => ({
-  id: question.id,
-  source: "questions",
-  sourceLabel: "相談広場",
-  author: question.author,
-  authorHandle: question.authorHandle,
-  createdByUid: question.createdByUid,
-  role: "顧問アカウント",
-  title: question.title,
-  body: question.body,
-  media: question.media,
-  replies: question.replies,
-  answers: question.answers,
-  bestAnswer: question.bestAnswer,
-  bestAnswerReplyId: question.bestAnswerReplyId,
-  sports: [question.category],
-  tags: ["相談", question.category],
-  createdAtMs: question.createdAtMs,
-});
-
-const buildCommunityDetail = (item: CommunityPost): PostDetailState => ({
-  id: item.id,
-  source: "community",
-  sourceLabel: "コミュニティ",
-  author: item.author,
-  authorHandle: item.authorHandle,
-  createdByUid: item.createdByUid,
-  role: "コミュニティ投稿",
-  title: item.title,
-  body: item.body,
-  media: item.media,
-  replies: item.replies,
-  sports: [],
-  tags: ["コミュニティ"],
-  createdAtMs: item.createdAtMs,
-});
-
-const buildInteractionRecord = ({
-  id,
-  userUid,
-  postId,
-  source,
-  createdAtMs,
-}: InteractionRecord) => ({
-  id,
-  userUid,
-  postId,
-  source,
-  createdAtMs,
-});
-
-const getPostCollectionFromSource = (source: SearchContentFilterKey) => {
-  if (source === "feed") {
-    return COLLECTIONS.feed;
-  }
-
-  if (source === "questions") {
-    return COLLECTIONS.questions;
-  }
-
-  return COLLECTIONS.community;
-};
-
-const getBestAnswerReplyForQuestion = (question: QuestionPost) => {
-  if (question.bestAnswerReplyId) {
-    return question.replies.find((reply) => reply.id === question.bestAnswerReplyId);
-  }
-
-  if (!question.bestAnswer || question.bestAnswer === "まだベストアンサーはありません。") {
-    return undefined;
-  }
-
-  return question.replies.find((reply) => reply.body === question.bestAnswer);
-};
-
-const buildReplyInteractionPostId = (rootPostId: string, path: string[]) =>
-  `reply:${rootPostId}:${path.join(":")}`;
-
-const findReplyByPath = (replies: Reply[], path: string[]): Reply | undefined => {
-  if (path.length === 0) {
-    return undefined;
-  }
-
-  const [currentId, ...rest] = path;
-  const currentReply = replies.find((reply) => reply.id === currentId);
-  if (!currentReply) {
-    return undefined;
-  }
-
-  if (rest.length === 0) {
-    return currentReply;
-  }
-
-  return findReplyByPath(currentReply.replies ?? [], rest);
-};
-
-const appendReplyToPath = (
-  replies: Reply[],
-  path: string[],
-  nextReply: Reply
-): Reply[] => {
-  if (path.length === 0) {
-    return [...replies, nextReply];
-  }
-
-  const [currentId, ...rest] = path;
-  return replies.map((reply) => {
-    if (reply.id !== currentId) {
-      return reply;
-    }
-
-    const currentChildren = reply.replies ?? [];
-    return {
-      ...reply,
-      replies:
-        rest.length === 0
-          ? [...currentChildren, nextReply]
-          : appendReplyToPath(currentChildren, rest, nextReply),
-    };
-  });
-};
-
-const mergeProfilePostItems = (baseItems: ProfilePostItem[], extraItems: ProfilePostItem[]) => {
-  const merged = new Map<string, ProfilePostItem>();
-
-  baseItems.forEach((item) => {
-    merged.set(item.id, item);
-  });
-  extraItems.forEach((item) => {
-    merged.set(item.id, item);
-  });
-
-  return Array.from(merged.values());
-};
-
-const flattenReplyItems = ({
-  replies,
-  source,
-  sourceLabel,
-  parentTitle,
-  rootPostId,
-  path = [],
-}: {
-  replies: Reply[];
-  source: SearchContentFilterKey;
-  sourceLabel: string;
-  parentTitle: string;
-  rootPostId: string;
-  path?: string[];
-}): Array<{
-  interactionPostId: string;
-  rootPostId: string;
-  source: SearchContentFilterKey;
-  sourceLabel: string;
-  parentTitle: string;
-  path: string[];
-  reply: Reply;
-}> =>
-  replies.flatMap((reply) => {
-    const nextPath = [...path, reply.id];
-    const interactionPostId = buildReplyInteractionPostId(rootPostId, nextPath);
-    const currentItem = {
-      interactionPostId,
-      rootPostId,
-      source,
-      sourceLabel,
-      parentTitle,
-      path: nextPath,
-      reply,
-    };
-
-    return [
-      currentItem,
-      ...flattenReplyItems({
-        replies: reply.replies ?? [],
-        source,
-        sourceLabel,
-        parentTitle,
-        rootPostId,
-        path: nextPath,
-      }),
-    ];
-  });
-
-const toTimestampMs = (value: unknown) => {
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "toDate" in value &&
-    typeof value.toDate === "function"
-  ) {
-    return (value.toDate() as Date).getTime();
-  }
-
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? undefined : parsed;
-  }
-
-  return undefined;
-};
-
-const formatDateTimeWithSeconds = (timestampMs?: number) => {
-  if (!timestampMs) {
-    return "日時未設定";
-  }
-
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(timestampMs));
-};
-
-const createLinkRow = (id: number): ExternalLink => ({
-  id: `link-${id}`,
-  label: "",
-  url: "",
-});
-
-const initialAdvisorForm: AdvisorFormState = {
-  nickname: "",
-  handle: "",
-  club: "",
-  experience: "",
-  loginEmail: "",
-  loginPassword: "",
-  selectedSports: [],
-};
-
-const initialCoachForm: CoachFormState = {
-  nickname: "",
-  handle: "",
-  specialty: "",
-  experience: "",
-  achievements: "",
-  phone: "",
-  publicEmail: "",
-  loginEmail: "",
-  loginPassword: "",
-  selectedSports: [],
-};
-
-const initialLoginForm: LoginFormState = {
-  email: "",
-  password: "",
-};
-
-const FIRESTORE_SAVE_TIMEOUT_MS = 8000;
-const IMAGE_FILE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
-const VIDEO_FILE_SIZE_LIMIT_BYTES = 100 * 1024 * 1024;
-const initialComposeState: ComposeState = {
-  target: "feed",
-  title: "",
-  body: "",
-  selectedSports: [],
-};
-const searchContentFilters: Array<{
-  key: SearchContentFilterKey;
-  label: string;
-}> = [
-  { key: "all", label: "全て" },
-  { key: "feed", label: "タイムライン" },
-  { key: "questions", label: "相談広場" },
-  { key: "community", label: "コミュニティ" },
-];
-const initialSelectedUserProfile: UserProfileState = {
-  ...defaultProfileState,
-  avatarLabel: defaultProfileState.name.slice(0, 1),
-  coverTone: "#d8c7ad",
-};
-const initialRelationshipListState: RelationshipListState = {
-  mode: "following",
-  title: "フォロー一覧",
-  accounts: [],
-  backScreen: "user-profile",
-};
-const initialPostDetailState: PostDetailState = {
-  id: "",
-  source: "feed",
-  sourceLabel: "タイムライン",
-  author: "",
-  role: "",
-  title: "",
-  body: "",
-  replies: [],
-  sports: [],
-  tags: [],
-};
-const initialReplyDetailState: ReplyDetailState = {
-  rootPostId: "",
-  source: "feed",
-  sourceLabel: "タイムライン",
-  path: [],
-  reply: {
-    id: "",
-    author: "",
-    body: "",
-    replies: [],
-  },
-  backScreen: "post-detail",
-};
+import {
+  ActivityBadgeSection,
+  AvatarVisual,
+  ComposeMediaPreview,
+  DefaultAvatarIcon,
+  ExpandableBody,
+  FeedbackBanner,
+  FormField,
+  ImageField,
+  KomonityLogo,
+  LegalSection,
+  LinkPreviewCard,
+  MediaGallery,
+  PageIntro,
+  ProfileBannerVisual,
+  RegistrationHeader,
+  ReplyList,
+  RichTextRenderer,
+  RichTextToolbar,
+  SportSelector,
+} from "./src/components/shared";
+import {
+  advisorRegistrationFields,
+  coachRegistrationFields,
+  COLLECTIONS,
+  DEFAULT_PUBLIC_SITE_URL,
+  defaultProfileState,
+  FIRESTORE_SAVE_TIMEOUT_MS,
+  IMAGE_FILE_SIZE_LIMIT_BYTES,
+  initialAdvisorForm,
+  initialCommunityItems,
+  initialCoachForm,
+  initialComposeState,
+  initialContactForm,
+  initialFeedPosts,
+  initialLoginForm,
+  initialPostDetailState,
+  initialQuestions,
+  initialReplyDetailState,
+  initialRelationshipListState,
+  initialSelectedUserProfile,
+  INITIAL_BADGE_MODAL_STATE,
+  INITIAL_EXTERNAL_LINK_MODAL_STATE,
+  INITIAL_SELECTION,
+  INITIAL_USER_ACTION_MENU_STATE,
+  myPageTabs,
+  POST_BODY_MAX_LENGTH,
+  POST_TITLE_MAX_LENGTH,
+  RECENT_LOGIN_MAX_AGE_MS,
+  registrationOptions,
+  REPLY_BODY_MAX_LENGTH,
+  searchContentFilters,
+  searchTabs,
+  sportGroups,
+  staticScreenPathMap,
+  SUPPORT_EMAIL_ADDRESS,
+  timelineSectionPathMap,
+  timelineSections,
+  VIDEO_FILE_SIZE_LIMIT_BYTES,
+} from "./src/constants/app";
+import { colors } from "./src/constants/theme";
+import { useTimelineSwipe } from "./src/hooks/useTimelineSwipe";
+import {
+  appendReplyToPath,
+  buildCommunityDetail,
+  buildDetailStateFromSearchItem,
+  buildFeedDetail,
+  buildInteractionRecord,
+  buildQuestionDetail,
+  buildReplyInteractionPostId,
+  findReplyByPath,
+  flattenReplyItems,
+  getBestAnswerReplyForQuestion,
+  getPostCollectionFromSource,
+  getSourceLabel,
+  mergeProfilePostItems,
+} from "./src/services/postService";
+import {
+  formatJoinedLabel,
+  getRoleLabel,
+  mapUserDocumentToProfileState,
+} from "./src/services/profileService";
+import {
+  normalizeMedia,
+  normalizeReplies,
+  toArrayOfStrings,
+  serializeMediaForFirestore,
+  serializeRepliesForFirestore,
+} from "./src/services/serializers";
+import type {
+  AccountDeleteConfirmStep,
+  ActivityBadge,
+  AdvisorFormState,
+  BadgeModalState,
+  BlockRecord,
+  CoachFormState,
+  CommunityPost,
+  ComposeState,
+  ContactFormState,
+  ExternalLink,
+  ExternalLinkModalState,
+  FeedPost,
+  FollowRecord,
+  InteractionRecord,
+  LocalMediaAsset,
+  LoginFormState,
+  MediaAttachment,
+  MediaKind,
+  NotificationItem,
+  PostAlertRecord,
+  PostDetailState,
+  ProfileTabKey,
+  ProfileAnswerItem,
+  ProfilePostItem,
+  ProfileState,
+  QuestionPost,
+  RelationshipListState,
+  Reply,
+  ReplyDetailState,
+  RichFormatAction,
+  ScreenKey,
+  SearchAccountItem,
+  SearchContentFilterKey,
+  SearchContentItem,
+  SearchTabKey,
+  TextSelectionRange,
+  TimelineSectionKey,
+  TrendingCoachItem,
+  UserActionMenuState,
+  UserActivitySummary,
+  UserDirectoryMeta,
+  UserProfileState,
+} from "./src/types/app";
+import {
+  applyRichFormatting,
+  buildProfilePath,
+  buildProfileUrl,
+  buildReplyPath,
+  buildSearchPath,
+  buildUrlPreviewLabel,
+  countRepliesRecursively,
+  createCoverToneFromName,
+  createHandleFromName,
+  createLinkRow,
+  extractDisplayBodyAndTags,
+  extractFirstUrl,
+  formatCount,
+  formatDateTimeWithSeconds,
+  formatFileSizeLabel,
+  getAccountSearchScore,
+  getAdvisorFieldKey,
+  getAdvisorFieldValue,
+  getCoachFieldKey,
+  getCoachFieldValue,
+  getContactSupportText,
+  getDaysSinceTimestamp,
+  getAvailablePostTargets,
+  getHandleSlug,
+  getMediaSizeLimit,
+  getPostingStreakDays,
+  getProfileCompletionScore,
+  getPublicSiteUrl,
+  getTrendingCoachScore,
+  getTrendingScore,
+  mergeItemsById,
+  normalizeHandle,
+  parseFollowerCount,
+  parseWebRoute,
+  replyMatchesProfile,
+  toTimestampMs,
+  toAuthErrorMessage,
+  toSaveErrorMessage,
+  userMatchesProfile,
+  createTieredBadge,
+  buildPostPath,
+} from "./src/utils/appUtils";
 
 export default function App() {
+  const isHandlingBrowserNavigation = useRef(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenKey>("top");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [advisorIconUri, setAdvisorIconUri] = useState<string | null>(null);
@@ -1590,6 +230,9 @@ export default function App() {
     useState<AdvisorFormState>(initialAdvisorForm);
   const [coachForm, setCoachForm] = useState<CoachFormState>(initialCoachForm);
   const [loginForm, setLoginForm] = useState<LoginFormState>(initialLoginForm);
+  const [contactForm, setContactForm] = useState<ContactFormState>(initialContactForm);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [spamReasonDraft, setSpamReasonDraft] = useState("");
   const [profileState, setProfileState] = useState<ProfileState>(defaultProfileState);
   const [profileDraft, setProfileDraft] = useState<ProfileState>(defaultProfileState);
   const [selectedUserProfile, setSelectedUserProfile] =
@@ -1608,6 +251,10 @@ export default function App() {
     useState<BadgeModalState>(INITIAL_BADGE_MODAL_STATE);
   const [externalLinkModalState, setExternalLinkModalState] =
     useState<ExternalLinkModalState>(INITIAL_EXTERNAL_LINK_MODAL_STATE);
+  const [userActionMenuState, setUserActionMenuState] =
+    useState<UserActionMenuState>(INITIAL_USER_ACTION_MENU_STATE);
+  const [accountDeleteConfirmStep, setAccountDeleteConfirmStep] =
+    useState<AccountDeleteConfirmStep>("idle");
   const [directoryAccounts, setDirectoryAccounts] = useState<SearchAccountItem[]>([]);
   const [directoryMetaMap, setDirectoryMetaMap] = useState<Record<string, UserDirectoryMeta>>({});
   const [followRecords, setFollowRecords] = useState<FollowRecord[]>([]);
@@ -1630,6 +277,8 @@ export default function App() {
     useState<SearchTabKey>("trending-posts");
   const [activeSearchContentFilter, setActiveSearchContentFilter] =
     useState<SearchContentFilterKey>("all");
+  const [activeTimelineSection, setActiveTimelineSection] =
+    useState<TimelineSectionKey>("all");
   const [activeProfileTab, setActiveProfileTab] = useState<ProfileTabKey>("posts");
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
@@ -1638,6 +287,11 @@ export default function App() {
   const [isReplySubmitting, setIsReplySubmitting] = useState(false);
   const [expandedBodyIds, setExpandedBodyIds] = useState<string[]>([]);
   const [pinnedPostKey, setPinnedPostKey] = useState<string | null>(null);
+  const [pendingWebRoute, setPendingWebRoute] = useState<string | null>(
+    Platform.OS === "web" && typeof window !== "undefined"
+      ? `${window.location.pathname}${window.location.search}`
+      : null
+  );
 
   useEffect(() => {
     if (!auth) {
@@ -2048,10 +702,13 @@ export default function App() {
     );
 
     const unsubscribeFeed = onSnapshot(feedQuery, (snapshot) => {
-      const firestorePosts: FeedPost[] = snapshot.docs.map((entry) => {
+      const firestorePosts: FeedPost[] = snapshot.docs.flatMap((entry) => {
         const data = entry.data();
+        if (data.isDeleted === true) {
+          return [];
+        }
 
-        return {
+        return [{
           id: entry.id,
           author:
             typeof data.author === "string" ? data.author : "Komonityユーザー",
@@ -2071,17 +728,21 @@ export default function App() {
           replies: normalizeReplies(data.replies),
           media: normalizeMedia(data.media),
           createdAtMs: toTimestampMs(data.createdAt),
-        };
+          isDeleted: data.isDeleted === true,
+        }];
       });
 
       setFeedTimeline(mergeItemsById([], firestorePosts));
     });
 
     const unsubscribeQuestions = onSnapshot(questionQuery, (snapshot) => {
-      const firestoreQuestions: QuestionPost[] = snapshot.docs.map((entry) => {
+      const firestoreQuestions: QuestionPost[] = snapshot.docs.flatMap((entry) => {
         const data = entry.data();
+        if (data.isDeleted === true) {
+          return [];
+        }
 
-        return {
+        return [{
           id: entry.id,
           category:
             typeof data.category === "string" ? data.category : "その他",
@@ -2105,17 +766,21 @@ export default function App() {
           replies: normalizeReplies(data.replies),
           media: normalizeMedia(data.media),
           createdAtMs: toTimestampMs(data.createdAt),
-        };
+          isDeleted: data.isDeleted === true,
+        }];
       });
 
       setQuestionBoard(mergeItemsById([], firestoreQuestions));
     });
 
     const unsubscribeCommunity = onSnapshot(communityQuery, (snapshot) => {
-      const firestoreCommunities: CommunityPost[] = snapshot.docs.map((entry) => {
+      const firestoreCommunities: CommunityPost[] = snapshot.docs.flatMap((entry) => {
         const data = entry.data();
+        if (data.isDeleted === true) {
+          return [];
+        }
 
-        return {
+        return [{
           id: entry.id,
           title: typeof data.title === "string" ? data.title : "",
           author:
@@ -2129,7 +794,8 @@ export default function App() {
           replies: normalizeReplies(data.replies),
           media: normalizeMedia(data.media),
           createdAtMs: toTimestampMs(data.createdAt),
-        };
+          isDeleted: data.isDeleted === true,
+        }];
       });
 
       setCommunityBoard(mergeItemsById([], firestoreCommunities));
@@ -2147,7 +813,93 @@ export default function App() {
     setAuthMessage("");
   };
 
-  const goToScreen = (screen: ScreenKey) => {
+  const updateBrowserPath = ({
+    path,
+    mode = "push",
+  }: {
+    path: string;
+    mode?: "push" | "replace";
+  }) => {
+    if (
+      Platform.OS !== "web" ||
+      typeof window === "undefined" ||
+      isHandlingBrowserNavigation.current
+    ) {
+      return;
+    }
+
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (currentPath === path) {
+      return;
+    }
+
+    if (mode === "replace") {
+      window.history.replaceState({}, "", path);
+      return;
+    }
+
+    window.history.pushState({}, "", path);
+  };
+
+  const getCurrentScreenPath = () => {
+    if (currentScreen === "top") {
+      return timelineSectionPathMap[activeTimelineSection];
+    }
+
+    if (currentScreen === "search") {
+      return buildSearchPath(searchQuery);
+    }
+
+    if (currentScreen === "user-profile") {
+      return buildProfilePath(selectedUserProfile.handle);
+    }
+
+    if (currentScreen === "post-detail" && postDetail.id) {
+      return buildPostPath(postDetail.source, postDetail.id);
+    }
+
+    if (
+      currentScreen === "reply-detail" &&
+      replyDetail.rootPostId &&
+      replyDetail.path.length > 0
+    ) {
+      return buildReplyPath(replyDetail.source, replyDetail.rootPostId, replyDetail.path);
+    }
+
+    return staticScreenPathMap[currentScreen] ?? "/";
+  };
+
+  const openTimelineSection = (
+    section: TimelineSectionKey,
+    mode: "push" | "replace" = "push"
+  ) => {
+    setActiveTimelineSection(section);
+    setCurrentScreen("top");
+    setIsMenuOpen(false);
+    updateBrowserPath({ path: timelineSectionPathMap[section], mode });
+  };
+
+  const goToScreen = (screen: ScreenKey, mode: "push" | "replace" = "push") => {
+    if (screen === "top") {
+      openTimelineSection("all", mode);
+      return;
+    }
+    if (screen === "feed") {
+      openTimelineSection("feed", mode);
+      return;
+    }
+    if (screen === "questions") {
+      openTimelineSection("questions", mode);
+      return;
+    }
+    if (screen === "community") {
+      openTimelineSection("community", mode);
+      return;
+    }
+    if (screen === "following-feed") {
+      openTimelineSection("following", mode);
+      return;
+    }
     if (screen === "profile-edit") {
       setProfileDraft(profileState);
     }
@@ -2159,16 +911,27 @@ export default function App() {
       setComposeMedia([]);
       setComposeBodySelection(INITIAL_SELECTION);
     }
+    if (screen === "contact") {
+      setContactForm((current) => ({
+        ...current,
+        email: authUser?.email ?? current.email,
+      }));
+    }
     setCurrentScreen(screen);
     setIsMenuOpen(false);
+    updateBrowserPath({ path: staticScreenPathMap[screen] ?? "/", mode });
   };
 
-  const openSearchWithQuery = (query: string) => {
+  const openSearchWithQuery = (
+    query: string,
+    mode: "push" | "replace" = "push"
+  ) => {
     setSearchQuery(query);
     setActiveSearchTab("trending-posts");
     setActiveSearchContentFilter("all");
     setCurrentScreen("search");
     setIsMenuOpen(false);
+    updateBrowserPath({ path: buildSearchPath(query), mode });
   };
 
   const renderHashtagChips = (tags: string[]) => {
@@ -2212,6 +975,30 @@ export default function App() {
     ]);
   };
 
+  const queueSupportEmail = async ({
+    subject,
+    text,
+    replyTo,
+  }: {
+    subject: string;
+    text: string;
+    replyTo?: string;
+  }) => {
+    if (!db) {
+      return;
+    }
+
+    await addDoc(collection(db, COLLECTIONS.mail), {
+      to: [SUPPORT_EMAIL_ADDRESS],
+      replyTo: replyTo ? [replyTo] : undefined,
+      message: {
+        subject,
+        text,
+      },
+      createdAt: serverTimestamp(),
+    });
+  };
+
   const updateAdvisorForm = (key: keyof AdvisorFormState, value: string) => {
     clearAuthFeedback();
     setAdvisorForm((current) => ({ ...current, [key]: value }));
@@ -2225,6 +1012,11 @@ export default function App() {
   const updateLoginForm = (key: keyof LoginFormState, value: string) => {
     clearAuthFeedback();
     setLoginForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateContactForm = (key: keyof ContactFormState, value: string) => {
+    clearAuthFeedback();
+    setContactForm((current) => ({ ...current, [key]: value }));
   };
 
   const toggleExpandedBody = (id: string) => {
@@ -2405,6 +1197,67 @@ export default function App() {
       }
 
       throw error;
+    }
+  };
+
+  const collectReplyMediaUrls = (replies: Reply[]): string[] =>
+    replies.flatMap((reply) => [
+      ...(reply.media?.map((item) => item.url) ?? []),
+      ...(reply.replies ? collectReplyMediaUrls(reply.replies) : []),
+    ]);
+
+  const deleteStorageFilesQuietly = async (urls: string[]) => {
+    await Promise.all(
+      urls.map(async (url) => {
+        try {
+          await deleteStorageFileByUrl(url);
+        } catch {
+          // Keep the post deletion flow moving even if a media file can no longer be removed.
+        }
+      })
+    );
+  };
+
+  const deletePostFromDetail = async () => {
+    clearAuthFeedback();
+
+    if (!authUser || !db || !postDetail.id) {
+      setAuthError("投稿削除にはログインが必要です。");
+      return;
+    }
+
+    const isOwner =
+      (postDetail.createdByUid && postDetail.createdByUid === authUser.uid) ||
+      postDetail.author === profileState.name;
+
+    if (!isOwner) {
+      setAuthError("自分の投稿のみ削除できます。");
+      return;
+    }
+
+    try {
+      const collectionName =
+        postDetail.source === "feed"
+          ? COLLECTIONS.feed
+          : postDetail.source === "questions"
+            ? COLLECTIONS.questions
+            : COLLECTIONS.community;
+
+      const mediaUrls = [
+        ...(postDetail.media?.map((item) => item.url) ?? []),
+        ...collectReplyMediaUrls(postDetail.replies),
+      ];
+
+      await updateDoc(doc(db, collectionName, postDetail.id), {
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+        deletedByUid: authUser.uid,
+      });
+      await deleteStorageFilesQuietly(mediaUrls);
+      setAuthMessage("投稿を削除しました。");
+      setCurrentScreen(postDetailBackScreen);
+    } catch (error) {
+      setAuthError(`投稿削除に失敗しました。${toSaveErrorMessage(error)}`);
     }
   };
 
@@ -2667,9 +1520,7 @@ export default function App() {
         handle: normalizedAdvisorHandle,
         role: "顧問アカウント",
         bio: `${advisorForm.club} を担当中。必要な種目を横断して情報収集しながら運営しています。`,
-        link: `komonity.jp/profile/${advisorForm.nickname
-          .replace(/\s+/g, "-")
-          .toLowerCase()}`,
+        link: buildProfileUrl(normalizedAdvisorHandle),
         avatarUrl: uploadedAdvisorIconUrl,
         coverUrl: uploadedAdvisorCoverUrl,
         externalLinks: [],
@@ -2778,9 +1629,7 @@ export default function App() {
         handle: normalizedCoachHandle,
         role: "指導員アカウント",
         bio: coachForm.achievements,
-        link: `komonity.jp/profile/${coachForm.nickname
-          .replace(/\s+/g, "-")
-          .toLowerCase()}`,
+        link: buildProfileUrl(normalizedCoachHandle),
         avatarUrl: uploadedCoachIconUrl,
         coverUrl: uploadedCoachCoverUrl,
         externalLinks: filteredLinks,
@@ -2859,6 +1708,82 @@ export default function App() {
       setCurrentScreen("mypage");
     } catch (error) {
       setAuthError(toAuthErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    clearAuthFeedback();
+
+    if (!hasAuthConfig || !auth) {
+      setAuthError("認証設定が未完了です。管理者に設定状況を確認してください。");
+      return;
+    }
+
+    if (!forgotPasswordEmail) {
+      setAuthError("再設定用メールアドレスを入力してください。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await sendPasswordResetEmail(auth, forgotPasswordEmail, {
+        url: getPublicSiteUrl(),
+        handleCodeInApp: false,
+      });
+      setAuthMessage(
+        "再設定メールを送信しました。登録済みメールアドレスであれば、メール内リンクからパスワードを変更できます。"
+      );
+      setForgotPasswordEmail("");
+    } catch (error) {
+      setAuthError(`再設定メールの送信に失敗しました。${toAuthErrorMessage(error)}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitContactInquiry = async () => {
+    clearAuthFeedback();
+
+    if (!db) {
+      setAuthError("お問い合わせ設定が未完了です。");
+      return;
+    }
+
+    if (!contactForm.email || !contactForm.subject || !contactForm.body) {
+      setAuthError("お問い合わせにはメールアドレス、件名、本文の入力が必要です。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, COLLECTIONS.inquiries), {
+        userUid: authUser?.uid ?? null,
+        email: contactForm.email,
+        subject: contactForm.subject,
+        body: contactForm.body,
+        createdAt: serverTimestamp(),
+      });
+      await queueSupportEmail({
+        subject: `[Komonity お問い合わせ] ${contactForm.subject}`,
+        replyTo: contactForm.email,
+        text: [
+          `送信者メールアドレス: ${contactForm.email}`,
+          authUser?.uid ? `送信者UID: ${authUser.uid}` : "送信者UID: 未ログイン",
+          "",
+          "お問い合わせ本文:",
+          contactForm.body,
+        ].join("\n"),
+      });
+      setContactForm({
+        email: authUser?.email ?? "",
+        subject: "",
+        body: "",
+      });
+      setAuthMessage("お問い合わせを送信しました。返信が必要な場合は入力されたメールアドレス宛にご連絡します。");
+    } catch (error) {
+      setAuthError(`お問い合わせの送信に失敗しました。${toSaveErrorMessage(error)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -2993,10 +1918,9 @@ export default function App() {
     {
       label: "公開ナレッジ投稿",
       value: formatCount(feedTimeline.length),
-      note: "タイムラインに公開されている投稿数",
+      note: "メニュー・戦術に公開されている投稿数",
     },
   ];
-
   const currentProfileFollowingValue = authUser
     ? String(followingCountMap[authUser.uid] ?? 0)
     : profileState.following;
@@ -3015,7 +1939,7 @@ export default function App() {
       createdAtMs: post.createdAtMs,
       id: post.id,
       source: "feed" as const,
-      sourceLabel: "タイムライン",
+      sourceLabel: "メニュー・戦術",
       author: post.author,
       authorHandle: post.authorHandle,
       createdByUid: post.createdByUid,
@@ -3086,6 +2010,12 @@ export default function App() {
       parentTitle: item.title,
       rootPostId: item.id,
     })
+  );
+  const homeContentItems = [...allSearchContentItems].sort(
+    (left, right) => (right.createdAtMs ?? 0) - (left.createdAtMs ?? 0)
+  );
+  const activeTimelineSectionIndex = timelineSections.findIndex(
+    (section) => section.key === activeTimelineSection
   );
   const trendingCoaches: TrendingCoachItem[] = directoryAccounts
     .filter(
@@ -3397,22 +2327,7 @@ export default function App() {
         : false
     );
 
-  const buildDetailFromSearchItem = (item: SearchContentItem): PostDetailState => ({
-    id: item.id,
-    source: item.source,
-    sourceLabel: item.sourceLabel,
-    author: item.author,
-    authorHandle: item.authorHandle,
-    createdByUid: item.createdByUid,
-    role: item.role,
-    title: item.title,
-    body: item.body,
-    media: item.media,
-    replies: item.replies,
-    sports: item.sports,
-    tags: item.tags,
-    createdAtMs: item.createdAtMs,
-  });
+  
 
   const notificationItems: NotificationItem[] = authUser
     ? [
@@ -3433,7 +2348,7 @@ export default function App() {
                 title: "いいねされました",
                 body: `${post.title} にいいねが付きました。`,
                 createdAtMs: record.createdAtMs ?? 0,
-                postDetail: buildDetailFromSearchItem(post),
+                postDetail: buildDetailStateFromSearchItem(post),
               }]
             : [];
         }),
@@ -3454,7 +2369,7 @@ export default function App() {
                 title: "再投稿されました",
                 body: `${post.title} が再投稿されました。`,
                 createdAtMs: record.createdAtMs ?? 0,
-                postDetail: buildDetailFromSearchItem(post),
+                postDetail: buildDetailStateFromSearchItem(post),
               }]
             : [];
         }),
@@ -3475,7 +2390,7 @@ export default function App() {
                 title: "保存されました",
                 body: `${post.title} が保存されました。`,
                 createdAtMs: record.createdAtMs ?? 0,
-                postDetail: buildDetailFromSearchItem(post),
+                postDetail: buildDetailStateFromSearchItem(post),
               }]
             : [];
         }),
@@ -3493,7 +2408,7 @@ export default function App() {
                 title: "返信が届きました",
                 body: `${item.parentTitle} に新しい返信があります。`,
                 createdAtMs: 0,
-                postDetail: buildDetailFromSearchItem(post),
+                postDetail: buildDetailStateFromSearchItem(post),
               }]
             : [];
         }),
@@ -3507,7 +2422,7 @@ export default function App() {
           .map((post) => ({
             id: `alert-${post.id}`,
             kind: "new-post" as const,
-            title: "見逃し防止の投稿通知",
+            title: "投稿通知",
             body: `${post.author} さんが新しい投稿を公開しました。`,
             createdAtMs: post.createdAtMs ?? 0,
             postDetail: buildFeedDetail(post),
@@ -3911,6 +2826,170 @@ export default function App() {
     replyDetail.source,
   ]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      return;
+    }
+
+    const handlePopState = () => {
+      setPendingWebRoute(`${window.location.pathname}${window.location.search}`);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingWebRoute) {
+      return;
+    }
+
+    const [pathname, search = ""] = pendingWebRoute.split("?");
+    const resolvedRoute = parseWebRoute(pathname, search ? `?${search}` : "");
+
+    if (resolvedRoute.kind === "screen") {
+      isHandlingBrowserNavigation.current = true;
+      if (resolvedRoute.screen === "top") {
+        setActiveTimelineSection(resolvedRoute.timelineSection ?? "all");
+      }
+      if (resolvedRoute.screen === "search") {
+        setSearchQuery(resolvedRoute.searchQuery ?? "");
+        setActiveSearchTab("trending-posts");
+        setActiveSearchContentFilter("all");
+      }
+      if (resolvedRoute.screen === "profile-edit") {
+        setProfileDraft(profileState);
+      }
+      setCurrentScreen(resolvedRoute.screen);
+      setIsMenuOpen(false);
+      setPendingWebRoute(null);
+      isHandlingBrowserNavigation.current = false;
+      return;
+    }
+
+    if (resolvedRoute.kind === "profile") {
+      const account =
+        directoryAccounts.find(
+          (item) => getHandleSlug(normalizeHandle(item.handle)) === resolvedRoute.handleSlug
+        ) ??
+        (authUser && getHandleSlug(profileState.handle) === resolvedRoute.handleSlug
+          ? {
+              id: authUser.uid,
+              name: profileState.name,
+              handle: profileState.handle,
+              bio: profileState.bio,
+              role: profileState.role,
+              followers: profileState.followers,
+              selectedSports: profileState.selectedSports,
+            }
+          : null);
+
+      if (!account) {
+        return;
+      }
+
+      isHandlingBrowserNavigation.current = true;
+      openUserProfile({
+        uid: account.id,
+        name: account.name,
+        role: account.role,
+        bio: account.bio,
+        handle: account.handle,
+        followers: account.followers,
+        selectedSports: account.selectedSports,
+        historyMode: "replace",
+      });
+      setPendingWebRoute(null);
+      isHandlingBrowserNavigation.current = false;
+      return;
+    }
+
+    if (resolvedRoute.kind === "post") {
+      const matchedPost = allSearchContentItems.find(
+        (item) => item.source === resolvedRoute.source && item.id === resolvedRoute.id
+      );
+      if (!matchedPost) {
+        return;
+      }
+
+      isHandlingBrowserNavigation.current = true;
+      openPostDetail({
+        detail: buildDetailStateFromSearchItem(matchedPost),
+        backScreen: "top",
+        historyMode: "replace",
+      });
+      setPendingWebRoute(null);
+      isHandlingBrowserNavigation.current = false;
+      return;
+    }
+
+    const rootReplies =
+      resolvedRoute.source === "feed"
+        ? feedTimeline.find((item) => item.id === resolvedRoute.rootPostId)?.replies
+        : resolvedRoute.source === "questions"
+          ? questionBoard.find((item) => item.id === resolvedRoute.rootPostId)?.replies
+          : communityBoard.find((item) => item.id === resolvedRoute.rootPostId)?.replies;
+
+    const targetReply = rootReplies
+      ? findReplyByPath(rootReplies, resolvedRoute.path)
+      : undefined;
+
+    if (!targetReply) {
+      return;
+    }
+
+    isHandlingBrowserNavigation.current = true;
+    openReplyDetail({
+      rootPostId: resolvedRoute.rootPostId,
+      source: resolvedRoute.source,
+      sourceLabel: getSourceLabel(resolvedRoute.source),
+      path: resolvedRoute.path,
+      reply: targetReply,
+      backScreen: resolvedRoute.path.length > 1 ? "reply-detail" : "post-detail",
+      historyMode: "replace",
+    });
+    setPendingWebRoute(null);
+    isHandlingBrowserNavigation.current = false;
+  }, [
+    allSearchContentItems,
+    authUser,
+    communityBoard,
+    directoryAccounts,
+    feedTimeline,
+    pendingWebRoute,
+    profileState.bio,
+    profileState.followers,
+    profileState.handle,
+    profileState.name,
+    profileState.role,
+    profileState.selectedSports,
+    questionBoard,
+  ]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined" || pendingWebRoute) {
+      return;
+    }
+
+    updateBrowserPath({
+      path: getCurrentScreenPath(),
+      mode: "replace",
+    });
+  }, [
+    activeTimelineSection,
+    currentScreen,
+    pendingWebRoute,
+    postDetail.id,
+    postDetail.source,
+    replyDetail.path,
+    replyDetail.rootPostId,
+    replyDetail.source,
+    searchQuery,
+    selectedUserProfile.handle,
+  ]);
+
   const saveProfileEdits = async () => {
     clearAuthFeedback();
 
@@ -3948,6 +3027,7 @@ export default function App() {
       );
       const nextProfile = {
         ...profileDraft,
+        link: buildProfileUrl(profileDraft.handle),
         avatarUrl: uploadedProfileIconUrl,
         coverUrl: uploadedProfileCoverUrl,
       };
@@ -3985,6 +3065,57 @@ export default function App() {
           error
         )}`
       );
+    }
+  };
+
+  const deleteCurrentAccount = async () => {
+    clearAuthFeedback();
+
+    if (!authUser || !db) {
+      setAuthError("アカウント削除にはログインが必要です。");
+      return;
+    }
+
+    const lastSignInMs = authUser.metadata.lastSignInTime
+      ? Date.parse(authUser.metadata.lastSignInTime)
+      : undefined;
+    if (
+      typeof lastSignInMs === "number" &&
+      !Number.isNaN(lastSignInMs) &&
+      Date.now() - lastSignInMs > RECENT_LOGIN_MAX_AGE_MS
+    ) {
+      setAuthError(
+        "安全のため、アカウント削除の前に一度ログインし直してください。"
+      );
+      setAccountDeleteConfirmStep("idle");
+      return;
+    }
+
+    try {
+      if (profileState.avatarUrl) {
+        await deleteStorageFileByUrl(profileState.avatarUrl);
+      }
+      if (profileState.coverUrl) {
+        await deleteStorageFileByUrl(profileState.coverUrl);
+      }
+      await deleteDoc(doc(db, "users", authUser.uid));
+      await deleteUser(authUser);
+      setProfileState(defaultProfileState);
+      setProfileDraft(defaultProfileState);
+      setPinnedPostKey(null);
+      setCurrentScreen("top");
+      setAuthMessage("アカウントを削除しました。");
+    } catch (error) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "auth/requires-recent-login"
+          ? "安全のため、アカウント削除の前に一度ログインし直してください。"
+          : `アカウント削除に失敗しました。${toSaveErrorMessage(error)}`;
+      setAuthError(message);
+    } finally {
+      setAccountDeleteConfirmStep("idle");
     }
   };
 
@@ -4049,6 +3180,7 @@ export default function App() {
     handle,
     selectedSports,
     followers,
+    historyMode = "push",
   }: {
     uid?: string;
     name: string;
@@ -4057,6 +3189,7 @@ export default function App() {
     handle?: string;
     selectedSports?: string[];
     followers?: string;
+    historyMode?: "push" | "replace";
   }) => {
     const authoredPosts = allSearchContentItems.filter((item) =>
       uid
@@ -4072,9 +3205,8 @@ export default function App() {
       name,
       handle: handle ?? createHandleFromName(name),
       role,
-      bio:
-        bio ?? `${role}としてKomonityで知見共有や相談対応を行っています。`,
-      link: `komonity.jp/profile/${name.replace(/\s+/g, "-").toLowerCase()}`,
+      bio: bio ?? "",
+      link: buildProfileUrl(handle ?? createHandleFromName(name)),
       externalLinks: uid ? directoryMetaMap[uid]?.externalLinks ?? [] : [],
       avatarUrl: uid ? directoryMetaMap[uid]?.iconUrl ?? "" : "",
       coverUrl: uid ? directoryMetaMap[uid]?.coverUrl ?? "" : "",
@@ -4095,6 +3227,10 @@ export default function App() {
     setActiveProfileTab("posts");
     setCurrentScreen("user-profile");
     setIsMenuOpen(false);
+    updateBrowserPath({
+      path: buildProfilePath(handle ?? createHandleFromName(name)),
+      mode: historyMode,
+    });
   };
 
   const isFollowingSelectedProfile = selectedUserProfile.uid
@@ -4186,14 +3322,21 @@ export default function App() {
   const reportUserAsSpam = async ({
     targetUid,
     targetName,
+    reason,
   }: {
     targetUid?: string;
     targetName: string;
+    reason: string;
   }) => {
     clearAuthFeedback();
 
     if (!authUser || !db || !targetUid) {
       setAuthError("この操作にはログインが必要です。");
+      return;
+    }
+
+    if (!reason.trim()) {
+      setAuthError("報告理由を入力してください。");
       return;
     }
 
@@ -4203,7 +3346,20 @@ export default function App() {
         targetUid,
         targetName,
         createdAt: serverTimestamp(),
-        reason: "spam",
+        reason: reason.trim(),
+      });
+      await queueSupportEmail({
+        subject: `[Komonity スパム報告] ${targetName}`,
+        replyTo: authUser.email ?? undefined,
+        text: [
+          `報告者UID: ${authUser.uid}`,
+          `報告者メールアドレス: ${authUser.email ?? "未設定"}`,
+          `報告対象UID: ${targetUid}`,
+          `報告対象名: ${targetName}`,
+          "",
+          "報告理由:",
+          reason.trim(),
+        ].join("\n"),
       });
       setAuthMessage(`${targetName} をスパムとして報告しました。`);
     } catch (error) {
@@ -4246,6 +3402,20 @@ export default function App() {
     }
   };
 
+  const openUserActionMenu = (targetUid?: string, targetName?: string) => {
+    setSpamReasonDraft("");
+    setUserActionMenuState({
+      open: true,
+      targetUid,
+      targetName: targetName ?? "",
+    });
+  };
+
+  const closeUserActionMenu = () => {
+    setUserActionMenuState(INITIAL_USER_ACTION_MENU_STATE);
+    setSpamReasonDraft("");
+  };
+
   const togglePinnedPost = async (post: ProfilePostItem) => {
     clearAuthFeedback();
 
@@ -4278,16 +3448,54 @@ export default function App() {
     }
   };
 
+  const openUserProfileByHandle = (handle: string) => {
+    const normalizedHandle = normalizeHandle(handle);
+    const normalizedSlug = getHandleSlug(normalizedHandle);
+    const account =
+      directoryAccounts.find(
+        (item) =>
+          getHandleSlug(normalizeHandle(item.handle)) === normalizedSlug
+      ) ??
+      (authUser && getHandleSlug(profileState.handle) === normalizedSlug
+        ? {
+            id: authUser.uid,
+            name: profileState.name,
+            handle: profileState.handle,
+            bio: profileState.bio,
+            role: profileState.role,
+            followers: profileState.followers,
+            selectedSports: profileState.selectedSports,
+          }
+        : null);
+
+    if (!account) {
+      setAuthError("該当するプロフィールが見つかりませんでした。");
+      return;
+    }
+
+    openUserProfile({
+      uid: "id" in account ? account.id : authUser?.uid,
+      name: account.name,
+      role: account.role,
+      bio: account.bio,
+      handle: account.handle,
+      followers: account.followers,
+      selectedSports: account.selectedSports,
+    });
+  };
+
   const openRelationshipList = ({
     mode,
     targetUid,
     title,
     backScreen,
+    historyMode = "push",
   }: {
     mode: "following" | "followers";
     targetUid?: string;
     title: string;
     backScreen: "mypage" | "user-profile";
+    historyMode?: "push" | "replace";
   }) => {
     if (!targetUid) {
       return;
@@ -4313,14 +3521,20 @@ export default function App() {
       backScreen,
     });
     setCurrentScreen("relationship-list");
+    updateBrowserPath({
+      path: staticScreenPathMap["relationship-list"] ?? "/",
+      mode: historyMode,
+    });
   };
 
   const openPostDetail = ({
     detail,
     backScreen,
+    historyMode = "push",
   }: {
     detail: PostDetailState;
     backScreen: ScreenKey;
+    historyMode?: "push" | "replace";
   }) => {
     setPostDetail(detail);
     setPostDetailBackScreen(backScreen);
@@ -4328,6 +3542,10 @@ export default function App() {
     setReplyMedia([]);
     setCurrentScreen("post-detail");
     setIsMenuOpen(false);
+    updateBrowserPath({
+      path: buildPostPath(detail.source, detail.id),
+      mode: historyMode,
+    });
   };
 
   const openReplyDetail = ({
@@ -4337,7 +3555,8 @@ export default function App() {
     path,
     reply,
     backScreen,
-  }: ReplyDetailState) => {
+    historyMode = "push",
+  }: ReplyDetailState & { historyMode?: "push" | "replace" }) => {
     setReplyDetail({
       rootPostId,
       source,
@@ -4350,6 +3569,10 @@ export default function App() {
     setReplyMedia([]);
     setCurrentScreen("reply-detail");
     setIsMenuOpen(false);
+    updateBrowserPath({
+      path: buildReplyPath(source, rootPostId, path),
+      mode: historyMode,
+    });
   };
 
   const goBackFromReplyDetail = () => {
@@ -4716,14 +3939,6 @@ export default function App() {
       return;
     }
 
-    const starterReplies: Reply[] = [
-      {
-        id: `reply-${Date.now()}`,
-        author: "Komonity Bot",
-        body: "投稿ありがとうございます。ここから全員がリプライできます。",
-      },
-    ];
-
     setIsPublishing(true);
 
     try {
@@ -4742,14 +3957,14 @@ export default function App() {
           likes: 0,
           reposts: 0,
           comments: 0,
-          replies: starterReplies,
+          replies: [],
           media: uploadedMedia,
           createdByUid: authUser.uid,
           visibility: "public",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-        setCurrentScreen("feed");
+      setCurrentScreen("top");
       }
 
       if (composeState.target === "questions") {
@@ -4763,7 +3978,7 @@ export default function App() {
           role: profileState.role,
           answers: 0,
           bestAnswer: "まだベストアンサーはありません。",
-          replies: starterReplies,
+          replies: [],
           media: uploadedMedia,
           sports: selectedComposeSports.length > 0 ? selectedComposeSports : ["その他"],
           createdByUid: authUser.uid,
@@ -4783,7 +3998,7 @@ export default function App() {
           role: profileState.role,
           body: composeState.body,
           cta: "スレッドを見る",
-          replies: starterReplies,
+          replies: [],
           media: uploadedMedia,
           sports: selectedComposeSports.length > 0 ? selectedComposeSports : ["その他"],
           createdByUid: authUser.uid,
@@ -4805,6 +4020,12 @@ export default function App() {
     }
   };
 
+  const timelineSwipePanResponder = useTimelineSwipe({
+    activeTimelineSection,
+    timelineSections,
+    setActiveTimelineSection,
+  });
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -4823,9 +4044,457 @@ export default function App() {
       </View>
 
       {currentScreen === "top" ? (
+        <View style={[styles.pageContainer, styles.timelineScreen]}>
+          <View style={styles.timelineIntroBar}>
+            <Text style={styles.timelineIntroTitle}>タイムライン</Text>
+            <Text style={styles.timelineIntroText}>
+              見たい投稿一覧を切り替えながら確認できます。
+            </Text>
+          </View>
+          <View style={styles.timelineSectionScrollShell}>
+            <ScrollView
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              style={styles.timelineSectionScroll}
+              contentContainerStyle={styles.timelineSectionHeaderRow}
+            >
+              {timelineSections.map((section) => (
+                <Pressable
+                  key={section.key}
+                  style={[
+                    styles.timelineSectionChip,
+                    activeTimelineSection === section.key &&
+                      styles.timelineSectionChipActive,
+                  ]}
+                  onPress={() => setActiveTimelineSection(section.key)}
+                >
+                  <Text
+                    style={[
+                      styles.timelineSectionChipText,
+                      activeTimelineSection === section.key &&
+                        styles.timelineSectionChipTextActive,
+                    ]}
+                  >
+                    {section.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+          <View style={styles.timelineContentShell} {...timelineSwipePanResponder.panHandlers}>
+            <ScrollView
+              style={styles.timelineContentScroller}
+              contentContainerStyle={styles.timelinePageContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {activeTimelineSection === "all" && homeContentItems.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>まだ投稿がありません</Text>
+                  <Text style={styles.cardBody}>
+                    投稿が増えると、ここに新しい順で一覧表示されます。
+                  </Text>
+                </View>
+              ) : null}
+              {activeTimelineSection === "all"
+                ? homeContentItems.map((item) => {
+                    const homeDisplay = extractDisplayBodyAndTags(item.body);
+                    return (
+                      <View key={`${item.source}:${item.id}`} style={styles.postCard}>
+                        <View style={styles.postHeader}>
+                          <Pressable
+                            style={styles.authorRow}
+                            onPress={() =>
+                              openUserProfile({
+                                uid: item.createdByUid,
+                                name: item.author,
+                                role: item.role,
+                                handle: item.authorHandle,
+                                selectedSports: item.sports,
+                              })
+                            }
+                          >
+                            <View style={styles.authorAvatar}>
+                              <DefaultAvatarIcon size={28} />
+                            </View>
+                            <View style={styles.authorTextBlock}>
+                              <Text style={styles.cardTitle}>{item.title}</Text>
+                              <Text style={styles.cardMeta}>
+                                {item.author} ・ {item.role}
+                              </Text>
+                            </View>
+                          </Pressable>
+                          <View style={styles.pill}>
+                            <Text style={styles.pillText}>{item.sourceLabel}</Text>
+                          </View>
+                        </View>
+                        <Pressable
+                          style={styles.detailTapArea}
+                          onPress={() =>
+                            openPostDetail({
+                              detail: buildDetailStateFromSearchItem(item),
+                              backScreen: "top",
+                            })
+                          }
+                        >
+                          {item.sports.length > 0 ? (
+                            <View style={styles.sportChipRow}>
+                              {item.sports.map((sport) => (
+                                <View key={sport} style={styles.sportChip}>
+                                  <Text style={styles.sportChipText}>{sport}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          ) : null}
+                          {homeDisplay.bodyText ? (
+                            <ExpandableBody
+                              id={`top:${item.source}:${item.id}`}
+                              content={homeDisplay.bodyText}
+                              expanded={expandedBodyIds.includes(
+                                `top:${item.source}:${item.id}`
+                              )}
+                              onToggle={toggleExpandedBody}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          ) : null}
+                          <MediaGallery media={item.media} />
+                          {renderHashtagChips(homeDisplay.tags)}
+                        </Pressable>
+                        <ReplyList replies={item.replies} />
+                      </View>
+                    );
+                  })
+                : null}
+              {activeTimelineSection === "feed" && filteredFeedPosts.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>該当する投稿がまだありません</Text>
+                  <Text style={styles.cardBody}>
+                    指導者の投稿が増えると、ここに最新の内容が表示されます。
+                  </Text>
+                </View>
+              ) : null}
+              {activeTimelineSection === "feed"
+                ? filteredFeedPosts.map((post) => {
+                    const interactionKey = `feed:${post.id}`;
+                    const liked = authUser
+                      ? likeRecords.some(
+                          (record) =>
+                            record.userUid === authUser.uid &&
+                            record.postId === post.id &&
+                            record.source === "feed"
+                        )
+                      : false;
+                    const feedDisplay = extractDisplayBodyAndTags(post.body);
+                    return (
+                      <View key={post.id} style={styles.postCard}>
+                        <View style={styles.postHeader}>
+                          <Pressable
+                            style={styles.authorRow}
+                            onPress={() =>
+                              openUserProfile({
+                                uid: post.createdByUid,
+                                name: post.author,
+                                role: post.role,
+                                handle: post.authorHandle,
+                                selectedSports: post.sports,
+                              })
+                            }
+                          >
+                            <View style={styles.authorAvatar}>
+                              <DefaultAvatarIcon size={28} />
+                            </View>
+                            <View style={styles.authorTextBlock}>
+                              <Text style={styles.cardTitle}>{post.title}</Text>
+                              <Text style={styles.cardMeta}>
+                                {post.author} ・ {post.role}
+                              </Text>
+                            </View>
+                          </Pressable>
+                          <View style={styles.pill}>
+                            <Text style={styles.pillText}>メニュー・戦術</Text>
+                          </View>
+                        </View>
+                        <Pressable
+                          style={styles.detailTapArea}
+                          onPress={() =>
+                            openPostDetail({
+                              detail: buildFeedDetail(post),
+                              backScreen: "top",
+                            })
+                          }
+                        >
+                          <View style={styles.sportChipRow}>
+                            {post.sports.map((sport) => (
+                              <View key={sport} style={styles.sportChip}>
+                                <Text style={styles.sportChipText}>{sport}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          {feedDisplay.bodyText ? (
+                            <ExpandableBody
+                              id={`feed:${post.id}`}
+                              content={feedDisplay.bodyText}
+                              expanded={expandedBodyIds.includes(`feed:${post.id}`)}
+                              onToggle={toggleExpandedBody}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          ) : null}
+                          <MediaGallery media={post.media} />
+                          {renderHashtagChips(feedDisplay.tags)}
+                        </Pressable>
+                        <View style={styles.metricRow}>
+                          <Pressable
+                            onPress={() =>
+                              void togglePostInteraction({
+                                collectionName: COLLECTIONS.likes,
+                                detail: buildFeedDetail(post),
+                              })
+                            }
+                            style={[
+                              styles.metricButton,
+                              liked && styles.metricButtonActive,
+                            ]}
+                          >
+                            <Text
+                              style={[styles.metricText, liked && styles.metricTextActive]}
+                            >
+                              いいね {likeCountMap[interactionKey] ?? post.likes}
+                            </Text>
+                          </Pressable>
+                          <View style={styles.metricChip}>
+                            <Text style={styles.metricText}>
+                              再投稿 {repostCountMap[interactionKey] ?? post.reposts}
+                            </Text>
+                          </View>
+                          <View style={styles.metricChip}>
+                            <Text style={styles.metricText}>コメント {post.comments}</Text>
+                          </View>
+                        </View>
+                        <ReplyList replies={post.replies} />
+                      </View>
+                    );
+                  })
+                : null}
+              {activeTimelineSection === "questions" && visibleQuestionBoard.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>相談はまだありません</Text>
+                  <Text style={styles.cardBody}>
+                    顧問からの相談が投稿されると、ここに表示されます。
+                  </Text>
+                </View>
+              ) : null}
+              {activeTimelineSection === "questions"
+                ? visibleQuestionBoard.map((question) => {
+                    const questionDisplay = extractDisplayBodyAndTags(question.body);
+                    return (
+                      <View key={question.id} style={styles.questionCard}>
+                        <Pressable
+                          style={styles.detailTapArea}
+                          onPress={() =>
+                            openPostDetail({
+                              detail: buildQuestionDetail(question),
+                              backScreen: "top",
+                            })
+                          }
+                        >
+                          <Text style={styles.categoryText}>{question.category}</Text>
+                          <Text style={styles.cardTitle}>{question.title}</Text>
+                          <Pressable
+                            onPress={() =>
+                              openUserProfile({
+                                uid: question.createdByUid,
+                                name: question.author,
+                                role: "顧問アカウント",
+                                handle: question.authorHandle,
+                                selectedSports: [question.category],
+                              })
+                            }
+                          >
+                            <Text style={styles.cardMeta}>
+                              投稿者: {question.author} ・ 回答数 {question.answers}
+                            </Text>
+                          </Pressable>
+                          {questionDisplay.bodyText ? (
+                            <ExpandableBody
+                              id={`questions:${question.id}`}
+                              content={questionDisplay.bodyText}
+                              expanded={expandedBodyIds.includes(
+                                `questions:${question.id}`
+                              )}
+                              onToggle={toggleExpandedBody}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          ) : null}
+                          <MediaGallery media={question.media} />
+                          {renderHashtagChips(questionDisplay.tags)}
+                          <View style={styles.bestAnswerBox}>
+                            <Text style={styles.bestAnswerLabel}>ベストアンサー</Text>
+                            <RichTextRenderer
+                              content={question.bestAnswer}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          </View>
+                        </Pressable>
+                        <ReplyList replies={question.replies} />
+                      </View>
+                    );
+                  })
+                : null}
+              {activeTimelineSection === "community" &&
+              visibleCommunityBoard.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>コミュニティ投稿はまだありません</Text>
+                  <Text style={styles.cardBody}>
+                    コミュニティの投稿が増えると、ここに表示されます。
+                  </Text>
+                </View>
+              ) : null}
+              {activeTimelineSection === "community"
+                ? visibleCommunityBoard.map((item) => {
+                    const communityDisplay = extractDisplayBodyAndTags(item.body);
+                    return (
+                      <View key={item.id} style={styles.communityCard}>
+                        <Pressable
+                          style={styles.detailTapArea}
+                          onPress={() =>
+                            openPostDetail({
+                              detail: buildCommunityDetail(item),
+                              backScreen: "top",
+                            })
+                          }
+                        >
+                          <Text style={styles.cardTitle}>{item.title}</Text>
+                          <Pressable
+                            onPress={() =>
+                              openUserProfile({
+                                uid: item.createdByUid,
+                                name: item.author,
+                                role: "コミュニティ運営",
+                                handle: item.authorHandle,
+                              })
+                            }
+                          >
+                            <Text style={styles.cardMeta}>投稿者: {item.author}</Text>
+                          </Pressable>
+                          {communityDisplay.bodyText ? (
+                            <ExpandableBody
+                              id={`community:${item.id}`}
+                              content={communityDisplay.bodyText}
+                              expanded={expandedBodyIds.includes(`community:${item.id}`)}
+                              onToggle={toggleExpandedBody}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          ) : null}
+                          <MediaGallery media={item.media} />
+                          {renderHashtagChips(communityDisplay.tags)}
+                        </Pressable>
+                        <Pressable style={styles.communityButton}>
+                          <Text style={styles.communityButtonText}>{item.cta}</Text>
+                        </Pressable>
+                        <ReplyList replies={item.replies} />
+                      </View>
+                    );
+                  })
+                : null}
+              {activeTimelineSection === "following" && !authUser ? (
+                <View style={styles.registrationCard}>
+                  <View style={styles.registrationFlowCard}>
+                    <Text style={styles.registrationFlowText}>
+                      フォロー中の投稿一覧は、登録済みユーザー向けの機能です。ログインすると、フォローしたアカウントの投稿だけをまとめて確認できます。
+                    </Text>
+                    <View style={styles.inlineButtonRow}>
+                      <Pressable
+                        style={styles.primaryButton}
+                        onPress={() => setCurrentScreen("registration-role")}
+                      >
+                        <Text style={styles.primaryButtonText}>登録する</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.secondaryButton}
+                        onPress={() => setCurrentScreen("login")}
+                      >
+                        <Text style={styles.secondaryButtonText}>ログインする</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+              {activeTimelineSection === "following" &&
+              authUser &&
+              followingFeedPosts.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>まだ投稿がありません</Text>
+                  <Text style={styles.cardBody}>
+                    アカウントをフォローすると、ここにその人の投稿が表示されます。
+                  </Text>
+                </View>
+              ) : null}
+              {activeTimelineSection === "following" && authUser
+                ? followingFeedPosts.map((post) => {
+                    const followingPostDisplay = extractDisplayBodyAndTags(post.body);
+                    return (
+                      <View key={post.id} style={styles.postCard}>
+                        <View style={styles.postHeader}>
+                          <Pressable
+                            style={styles.authorRow}
+                            onPress={() =>
+                              openUserProfile({
+                                uid: post.createdByUid,
+                                name: post.author,
+                                role: post.role,
+                                handle: post.authorHandle,
+                                selectedSports: post.sports,
+                              })
+                            }
+                          >
+                            <View style={styles.authorAvatar}>
+                              <DefaultAvatarIcon size={28} />
+                            </View>
+                            <View style={styles.authorTextBlock}>
+                              <Text style={styles.cardTitle}>{post.title}</Text>
+                              <Text style={styles.cardMeta}>
+                                {post.author} ・ {post.role}
+                              </Text>
+                            </View>
+                          </Pressable>
+                          <View style={styles.pill}>
+                            <Text style={styles.pillText}>フォロー中</Text>
+                          </View>
+                        </View>
+                        <Pressable
+                          style={styles.detailTapArea}
+                          onPress={() =>
+                            openPostDetail({
+                              detail: buildFeedDetail(post),
+                              backScreen: "top",
+                            })
+                          }
+                        >
+                          {followingPostDisplay.bodyText ? (
+                            <ExpandableBody
+                              id={`following:${post.id}`}
+                              content={followingPostDisplay.bodyText}
+                              expanded={expandedBodyIds.includes(`following:${post.id}`)}
+                              onToggle={toggleExpandedBody}
+                              onOpenUrl={requestOpenExternalUrl}
+                            />
+                          ) : null}
+                          <MediaGallery media={post.media} />
+                          {renderHashtagChips(followingPostDisplay.tags)}
+                        </Pressable>
+                        <ReplyList replies={post.replies} />
+                      </View>
+                    );
+                  })
+                : null}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+
+      {currentScreen === "service-detail" ? (
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.heroCard}>
-            <Text style={styles.eyebrow}>Komonity</Text>
+            <Text style={styles.eyebrow}>サービス詳細</Text>
             <Text style={styles.heroTitle}>
               顧問の先生と指導者をつなぐ、相談と実践共有のサービス
             </Text>
@@ -4870,24 +4539,19 @@ export default function App() {
                 ホーム → 役割選択 → 専用登録ページ → アカウント登録
               </Text>
             </View>
-
-            <View style={styles.authPanel}>
-              <Text style={styles.authPanelTitle}>認証状態</Text>
-              <Text style={styles.authPanelText}>
-                {authUser
-                  ? `ログイン中: ${authUser.email ?? "メール未設定"}`
-                  : "未ログインです"}
+            <View style={styles.flowCard}>
+              <Text style={styles.flowTitle}>活動バッジ制度</Text>
+              <Text style={styles.flowText}>
+                指導者は、投稿数、継続投稿日数、フォロワー数、いいね・再投稿・保存の獲得数、
+                返信実績、ベストアンサー獲得数、プロフィール完成などの活動に応じてバッジを獲得できます。
               </Text>
-              {!hasAuthConfig ? (
-                <Text style={styles.warningText}>
-                  現在、認証設定が未完了です。管理者へお問い合わせください。
-                </Text>
-              ) : null}
-              {authUser ? (
-                <Pressable style={styles.secondaryButton} onPress={handleLogout}>
-                  <Text style={styles.secondaryButtonText}>ログアウト</Text>
-                </Pressable>
-              ) : null}
+              <Text style={styles.flowText}>
+                バッジは `K` マークのメダルとして表示され、ブロンズ、シルバー、ゴールドの3段階で成長します。
+                顧問アカウントからも確認できるため、どのような分野で継続的に活動している指導者かが分かりやすくなります。
+              </Text>
+              <Text style={styles.flowHint}>
+                例: 投稿実績 / 継続投稿 / 反応獲得 / ベストアンサー / プロフィール完成
+              </Text>
             </View>
           </View>
 
@@ -4904,10 +4568,19 @@ export default function App() {
             ))}
           </View>
           <View style={styles.topShortcutGrid}>
-            <Pressable style={styles.shortcutCard} onPress={() => goToScreen("feed")}>
+            <Pressable style={styles.shortcutCard} onPress={() => goToScreen("top")}>
               <Text style={styles.shortcutTitle}>タイムライン</Text>
               <Text style={styles.shortcutText}>
-                指導者の毎日投稿や注目ナレッジを一覧で確認できます。
+                すべての投稿を新しい順でまとめて確認できます。
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.shortcutCard}
+              onPress={() => goToScreen("feed")}
+            >
+              <Text style={styles.shortcutTitle}>メニュー・戦術</Text>
+              <Text style={styles.shortcutText}>
+                指導者によるおすすめの練習メニューや戦術投稿だけを確認できます。
               </Text>
             </Pressable>
             <Pressable
@@ -4944,8 +4617,8 @@ export default function App() {
       {currentScreen === "feed" ? (
         <ScrollView contentContainerStyle={styles.pageContainer}>
           <PageIntro
-            title="タイムライン"
-            description="すべての種目の投稿を一覧で確認できます。"
+            title="メニュー・戦術"
+            description="指導者によるおすすめの練習メニューや戦術投稿を一覧で確認できます。"
           />
           <View style={styles.stack}>
             {filteredFeedPosts.length === 0 ? (
@@ -4993,7 +4666,7 @@ export default function App() {
                       </View>
                     </Pressable>
                     <View style={styles.pill}>
-                      <Text style={styles.pillText}>毎日投稿</Text>
+                      <Text style={styles.pillText}>メニュー・戦術</Text>
                     </View>
                   </View>
                   <Pressable
@@ -5346,6 +5019,17 @@ export default function App() {
               <Text style={styles.postDetailMetaLine}>
                 {formatDateTimeWithSeconds(postDetail.createdAtMs)}
               </Text>
+              {((postDetail.createdByUid && postDetail.createdByUid === authUser?.uid) ||
+                postDetail.author === profileState.name) ? (
+                <Pressable
+                  style={styles.postDeleteButton}
+                  onPress={() => {
+                    void deletePostFromDetail();
+                  }}
+                >
+                  <Text style={styles.postDeleteButtonText}>この投稿を削除する</Text>
+                </Pressable>
+              ) : null}
 
               <View style={styles.postDetailMetricRow}>
                 <View style={styles.metricChip}>
@@ -6026,6 +5710,68 @@ export default function App() {
 
       <Modal
         transparent={true}
+        visible={accountDeleteConfirmStep === "confirm-first"}
+        animationType="fade"
+        onRequestClose={() => setAccountDeleteConfirmStep("idle")}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>アカウントを削除しますか</Text>
+            <Text style={styles.modalBody}>
+              この操作を行うと、Komonity に登録したプロフィールとログイン情報が削除対象になります。
+            </Text>
+            <View style={styles.modalButtonRow}>
+              <Pressable
+                style={styles.modalSecondaryButton}
+                onPress={() => setAccountDeleteConfirmStep("idle")}
+              >
+                <Text style={styles.modalSecondaryButtonText}>やめる</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalDangerButton}
+                onPress={() => setAccountDeleteConfirmStep("confirm-final")}
+              >
+                <Text style={styles.modalDangerButtonText}>削除に進む</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent={true}
+        visible={accountDeleteConfirmStep === "confirm-final"}
+        animationType="fade"
+        onRequestClose={() => setAccountDeleteConfirmStep("idle")}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>本当に削除してよいですか</Text>
+            <Text style={styles.modalBody}>
+              この削除は取り消せません。アカウント、プロフィール画像、ヘッダー画像、認証情報が完全に削除されます。
+            </Text>
+            <View style={styles.modalButtonRow}>
+              <Pressable
+                style={styles.modalSecondaryButton}
+                onPress={() => setAccountDeleteConfirmStep("idle")}
+              >
+                <Text style={styles.modalSecondaryButtonText}>キャンセル</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalDangerButton}
+                onPress={() => {
+                  void deleteCurrentAccount();
+                }}
+              >
+                <Text style={styles.modalDangerButtonText}>完全に削除する</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        transparent={true}
         visible={bestAnswerCandidate !== null}
         animationType="fade"
         onRequestClose={() => setBestAnswerCandidate(null)}
@@ -6192,7 +5938,7 @@ export default function App() {
             <>
               <RegistrationHeader
                 title="通知"
-                description="いいね、返信、保存、再投稿、見逃し防止に設定したアカウントの新規投稿を確認できます。"
+                description="いいね、返信、保存、再投稿、投稿通知に設定したアカウントの新規投稿を確認できます。"
                 onBack={() => setCurrentScreen("top")}
               />
               <View style={styles.stack}>
@@ -6200,7 +5946,7 @@ export default function App() {
                   <View style={styles.communityCard}>
                     <Text style={styles.cardTitle}>通知はまだありません</Text>
                     <Text style={styles.cardBody}>
-                      反応や見逃し防止の設定があると、ここに一覧で表示されます。
+                      反応や投稿通知の設定があると、ここに一覧で表示されます。
                     </Text>
                   </View>
                 ) : null}
@@ -6238,7 +5984,7 @@ export default function App() {
               !authUser
                 ? "投稿の閲覧はできますが、投稿や返信を行うには登録またはログインが必要です。"
                 : profileState.role.includes("指導員")
-                ? "指導員はタイムラインへ知見やメニューを投稿できます。リプライは全員が参加できます。"
+                ? "指導員はメニュー・戦術へ知見や練習メニューを投稿できます。リプライは全員が参加できます。"
                 : "顧問は相談広場またはコミュニティへ投稿できます。リプライは全員が参加できます。"
             }
             onBack={() => setCurrentScreen("top")}
@@ -6284,7 +6030,7 @@ export default function App() {
                     <Text style={styles.formDetail}>役割に応じて選択</Text>
                   </View>
                   <Text style={styles.fieldSupport}>
-                    指導員はタイムラインのみ、顧問は相談広場とコミュニティに投稿できます。
+                    指導員はメニュー・戦術のみ、顧問は相談広場とコミュニティに投稿できます。
                   </Text>
                   <View style={styles.postTargetRow}>
                     {getAvailablePostTargets(profileState.role).map((target) => {
@@ -6837,7 +6583,6 @@ export default function App() {
                 <Text style={styles.profileHandle}>{profileState.handle}</Text>
                 <Text style={styles.profileRole}>{profileState.role}</Text>
                 <Text style={styles.profileBio}>{profileState.bio}</Text>
-                <Text style={styles.profileLink}>{profileState.link}</Text>
                 {profileState.externalLinks.length > 0 ? (
                   <View style={styles.externalLinksRow}>
                     {profileState.externalLinks.map((link) => (
@@ -7146,7 +6891,7 @@ export default function App() {
             <>
               <PageIntro
                 title="フォロー中の投稿"
-                description="フォローしているユーザーのタイムライン投稿だけをまとめて確認できます。"
+                description="フォローしているユーザーのメニュー・戦術投稿だけをまとめて確認できます。"
               />
               <View style={styles.stack}>
                 {followingFeedPosts.length === 0 ? (
@@ -7329,7 +7074,7 @@ export default function App() {
                 <View style={styles.userProfileActions}>
                   <Pressable
                     style={styles.profileIconButton}
-                    onPress={() => setCurrentScreen("feed")}
+                    onPress={() => setCurrentScreen("top")}
                   >
                     <Text style={styles.profileIconButtonText}>戻る</Text>
                   </Pressable>
@@ -7370,7 +7115,6 @@ export default function App() {
                 <Text style={styles.profileHandle}>{selectedUserProfile.handle}</Text>
                 <Text style={styles.profileRole}>{selectedUserProfile.role}</Text>
                 <Text style={styles.profileBio}>{selectedUserProfile.bio}</Text>
-                <Text style={styles.profileLink}>{selectedUserProfile.link}</Text>
                 {selectedUserProfile.externalLinks.length > 0 ? (
                   <View style={styles.externalLinksRow}>
                     {selectedUserProfile.externalLinks.map((link) => (
@@ -7452,45 +7196,15 @@ export default function App() {
                 {selectedUserProfile.uid && selectedUserProfile.uid !== authUser?.uid ? (
                   <View style={styles.userControlRow}>
                     <Pressable
-                      style={styles.inlineActionButton}
+                      style={styles.profileIconButton}
                       onPress={() =>
-                        void togglePostAlertsForUser({
-                          targetUid: selectedUserProfile.uid,
-                          targetName: selectedUserProfile.name,
-                        })
+                        openUserActionMenu(
+                          selectedUserProfile.uid,
+                          selectedUserProfile.name
+                        )
                       }
                     >
-                      <Text style={styles.inlineActionButtonText}>
-                        {currentPostAlertUserIds.includes(selectedUserProfile.uid)
-                          ? "投稿通知中"
-                          : "投稿を見逃さない"}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.inlineActionButton}
-                      onPress={() =>
-                        void toggleBlockUser({
-                          targetUid: selectedUserProfile.uid,
-                          targetName: selectedUserProfile.name,
-                        })
-                      }
-                    >
-                      <Text style={styles.inlineActionButtonText}>
-                        {currentBlockedUserIds.includes(selectedUserProfile.uid)
-                          ? "ブロック解除"
-                          : "ブロック"}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.inlineActionButton}
-                      onPress={() =>
-                        void reportUserAsSpam({
-                          targetUid: selectedUserProfile.uid,
-                          targetName: selectedUserProfile.name,
-                        })
-                      }
-                    >
-                      <Text style={styles.inlineActionButtonText}>スパム報告</Text>
+                      <Text style={styles.profileIconButtonText}>•••</Text>
                     </Pressable>
                   </View>
                 ) : null}
@@ -7689,7 +7403,7 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.pageContainer}>
           <RegistrationHeader
             title="プロフィール編集"
-            description="表示名、自己紹介、興味のある種目を編集できます。ここで選んだ種目がタイムライン表示にも反映されます。"
+            description="表示名、自己紹介、興味のある種目を編集できます。ここで選んだ種目が投稿表示にも反映されます。"
             onBack={() => setCurrentScreen("mypage")}
           />
           {authMessage ? <FeedbackBanner kind="success" message={authMessage} /> : null}
@@ -7743,14 +7457,6 @@ export default function App() {
               value={profileDraft.bio}
               onChangeText={(value) => updateProfileDraft("bio", value)}
             />
-            <FormField
-              label="プロフィールリンク"
-              detail="任意"
-              placeholder="例: komonity.jp/profile/..."
-              multiline={false}
-              value={profileDraft.link}
-              onChangeText={(value) => updateProfileDraft("link", value)}
-            />
             {profileDraft.role.includes("指導員") ? (
               <View style={styles.formGroup}>
                 <View style={styles.formLabelRow}>
@@ -7797,6 +7503,20 @@ export default function App() {
             <View style={styles.registrationFooter}>
               <Pressable style={styles.primaryButton} onPress={() => void saveProfileEdits()}>
                 <Text style={styles.primaryButtonText}>変更を保存する</Text>
+              </Pressable>
+            </View>
+            <View style={styles.accountDeleteSection}>
+              <Text style={styles.accountDeleteTitle}>アカウント削除</Text>
+              <Text style={styles.accountDeleteBody}>
+                アカウントを削除すると、ログイン情報も利用できなくなります。必要な情報は事前に確認してください。
+              </Text>
+              <Pressable
+                style={styles.accountDeleteButton}
+                onPress={() => setAccountDeleteConfirmStep("confirm-first")}
+              >
+                <Text style={styles.accountDeleteButtonText}>
+                  アカウントを削除する
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -8043,7 +7763,166 @@ export default function App() {
                   {isSubmitting ? "ログイン中..." : "ログインする"}
                 </Text>
               </Pressable>
+              <Pressable
+                style={styles.textLinkButton}
+                onPress={() => goToScreen("forgot-password")}
+              >
+                <Text style={styles.textLinkButtonText}>
+                  パスワードを忘れた場合
+                </Text>
+              </Pressable>
             </View>
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {currentScreen === "forgot-password" ? (
+        <ScrollView contentContainerStyle={styles.pageContainer}>
+          <RegistrationHeader
+            title="パスワード再設定"
+            description="登録済みのメールアドレスを入力すると、パスワード再設定メールを送信します。メール内のリンクから新しいパスワードを設定できます。"
+            onBack={() => setCurrentScreen("login")}
+          />
+          {authMessage ? <FeedbackBanner kind="success" message={authMessage} /> : null}
+          {authError ? <FeedbackBanner kind="error" message={authError} /> : null}
+          <View style={styles.registrationCard}>
+            <FormField
+              label="メールアドレス"
+              detail="必須 / 非公開"
+              placeholder="例: login@example.com"
+              multiline={false}
+              value={forgotPasswordEmail}
+              onChangeText={setForgotPasswordEmail}
+            />
+            <View style={styles.registrationFooter}>
+              <Pressable
+                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+                onPress={() => {
+                  void handleForgotPassword();
+                }}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isSubmitting ? "送信中..." : "再設定メールを送信する"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {currentScreen === "contact" ? (
+        <ScrollView contentContainerStyle={styles.pageContainer}>
+          <RegistrationHeader
+            title="お問い合わせ"
+            description="不具合報告やご相談はこちらから送信できます。返信が必要な場合は入力されたメールアドレス宛にご連絡します。"
+            onBack={() => setCurrentScreen("top")}
+          />
+          {authMessage ? <FeedbackBanner kind="success" message={authMessage} /> : null}
+          {authError ? <FeedbackBanner kind="error" message={authError} /> : null}
+          <View style={styles.registrationCard}>
+            <FormField
+              label="返信先メールアドレス"
+              detail="必須"
+              placeholder="例: your-address@example.com"
+              multiline={false}
+              value={contactForm.email}
+              onChangeText={(value) => updateContactForm("email", value)}
+            />
+            <FormField
+              label="件名"
+              detail="必須"
+              placeholder="例: アカウントについて"
+              multiline={false}
+              value={contactForm.subject}
+              onChangeText={(value) => updateContactForm("subject", value)}
+            />
+            <FormField
+              label="本文"
+              detail="必須 / 2000文字まで"
+              placeholder="お問い合わせ内容を入力してください"
+              multiline={true}
+              value={contactForm.body}
+              onChangeText={(value) => updateContactForm("body", value)}
+              maxLength={2000}
+            />
+            <View style={styles.registrationFooter}>
+              <Pressable
+                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+                onPress={() => {
+                  void submitContactInquiry();
+                }}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isSubmitting ? "送信中..." : "お問い合わせを送信する"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {currentScreen === "privacy-policy" ? (
+        <ScrollView contentContainerStyle={styles.pageContainer}>
+          <RegistrationHeader
+            title="プライバシーポリシー"
+            description="Komonity における個人情報の取扱い方針です。"
+            onBack={() => setCurrentScreen("top")}
+          />
+          <View style={styles.registrationCard}>
+            <LegalSection
+              title="1. 取得する情報"
+              body="アカウント登録時のメールアドレス、表示名、プロフィール情報、投稿内容、返信内容、通報やお問い合わせ内容など、サービス提供に必要な情報を取得します。"
+            />
+            <LegalSection
+              title="2. 利用目的"
+              body="アカウント管理、投稿機能の提供、本人確認や不正利用対策、お問い合わせ対応、重要なお知らせの通知のために利用します。"
+            />
+            <LegalSection
+              title="3. 第三者提供"
+              body="法令に基づく場合を除き、本人の同意なく第三者へ個人情報を提供しません。公開プロフィールとして登録された情報は、サービス利用者から閲覧できる場合があります。"
+            />
+            <LegalSection
+              title="4. 安全管理"
+              body="アクセス制御やルール設定など、個人情報の漏えい・改ざん・不正アクセスを防ぐために必要な措置を講じます。"
+            />
+            <LegalSection
+              title="5. お問い合わせ"
+              body={`個人情報に関するお問い合わせは、${SUPPORT_EMAIL_ADDRESS} またはアプリ内のお問い合わせ画面からご連絡ください。`}
+            />
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {currentScreen === "terms" ? (
+        <ScrollView contentContainerStyle={styles.pageContainer}>
+          <RegistrationHeader
+            title="利用規約"
+            description="Komonity を利用する際の基本的なルールです。"
+            onBack={() => setCurrentScreen("top")}
+          />
+          <View style={styles.registrationCard}>
+            <LegalSection
+              title="1. 適用"
+              body="本規約は、Komonity の利用に関する一切の関係に適用されます。"
+            />
+            <LegalSection
+              title="2. 禁止事項"
+              body="法令違反、公序良俗に反する行為、なりすまし、著作権や肖像権を侵害する投稿、個人情報の不適切な公開、スパム行為を禁止します。"
+            />
+            <LegalSection
+              title="3. 投稿内容"
+              body="投稿内容の責任は投稿者にあります。運営は必要に応じて投稿の削除、アカウント制限、通報対応を行うことがあります。"
+            />
+            <LegalSection
+              title="4. 外部リンク"
+              body="外部サイトへのリンクは利用者自身の判断でご利用ください。リンク先の内容や安全性について運営は責任を負いません。"
+            />
+            <LegalSection
+              title="5. 免責"
+              body="サービスの完全性、継続性、特定目的への適合性を保証するものではありません。"
+            />
           </View>
         </ScrollView>
       ) : null}
@@ -8054,22 +7933,16 @@ export default function App() {
             style={styles.menuBackdrop}
             onPress={() => setIsMenuOpen(false)}
           />
-          <View style={styles.sideMenu}>
+          <ScrollView style={styles.sideMenu} contentContainerStyle={styles.sideMenuContent}>
             <Text style={styles.sideMenuTitle}>メニュー</Text>
             <Pressable style={styles.sideMenuItem} onPress={() => goToScreen("top")}>
-              <Text style={styles.sideMenuItemText}>TOPページ</Text>
-            </Pressable>
-            <Pressable
-              style={styles.sideMenuItem}
-              onPress={() => goToScreen("feed")}
-            >
               <Text style={styles.sideMenuItemText}>タイムライン</Text>
             </Pressable>
             <Pressable
               style={styles.sideMenuItem}
-              onPress={() => goToScreen("questions")}
+              onPress={() => goToScreen("service-detail")}
             >
-              <Text style={styles.sideMenuItemText}>相談広場</Text>
+              <Text style={styles.sideMenuItemText}>サービス詳細</Text>
             </Pressable>
             <Pressable
               style={styles.sideMenuItem}
@@ -8097,21 +7970,27 @@ export default function App() {
             </Pressable>
             <Pressable
               style={styles.sideMenuItem}
-              onPress={() => goToScreen("community")}
-            >
-              <Text style={styles.sideMenuItemText}>コミュニティ</Text>
-            </Pressable>
-            <Pressable
-              style={styles.sideMenuItem}
               onPress={() => goToScreen("mypage")}
             >
               <Text style={styles.sideMenuItemText}>マイページ</Text>
             </Pressable>
             <Pressable
               style={styles.sideMenuItem}
-              onPress={() => goToScreen("following-feed")}
+              onPress={() => goToScreen("contact")}
             >
-              <Text style={styles.sideMenuItemText}>フォロー中の投稿</Text>
+              <Text style={styles.sideMenuItemText}>お問い合わせ</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sideMenuItem}
+              onPress={() => goToScreen("privacy-policy")}
+            >
+              <Text style={styles.sideMenuItemText}>プライバシーポリシー</Text>
+            </Pressable>
+            <Pressable
+              style={styles.sideMenuItem}
+              onPress={() => goToScreen("terms")}
+            >
+              <Text style={styles.sideMenuItemText}>利用規約</Text>
             </Pressable>
             {!authUser ? (
               <Pressable
@@ -8139,811 +8018,83 @@ export default function App() {
                 <Text style={styles.sideMenuItemText}>ログイン</Text>
               </Pressable>
             )}
-          </View>
+          </ScrollView>
         </View>
       ) : null}
+
+      <Modal
+        transparent
+        visible={userActionMenuState.open}
+        animationType="fade"
+        onRequestClose={closeUserActionMenu}
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalFill} onPress={closeUserActionMenu} />
+          <View style={styles.userActionMenuCard}>
+            <Text style={styles.modalTitle}>
+              {userActionMenuState.targetName || "このアカウント"}への操作
+            </Text>
+            <Pressable
+              style={styles.userActionMenuItem}
+              onPress={() => {
+                void togglePostAlertsForUser({
+                  targetUid: userActionMenuState.targetUid,
+                  targetName: userActionMenuState.targetName,
+                });
+                closeUserActionMenu();
+              }}
+            >
+              <Text style={styles.userActionMenuItemText}>
+                {userActionMenuState.targetUid &&
+                currentPostAlertUserIds.includes(userActionMenuState.targetUid)
+                  ? "投稿通知を解除"
+                  : "投稿を通知"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.userActionMenuItem}
+              onPress={() => {
+                void toggleBlockUser({
+                  targetUid: userActionMenuState.targetUid,
+                  targetName: userActionMenuState.targetName,
+                });
+                closeUserActionMenu();
+              }}
+            >
+              <Text style={styles.userActionMenuItemText}>
+                {userActionMenuState.targetUid &&
+                currentBlockedUserIds.includes(userActionMenuState.targetUid)
+                  ? "ブロックを解除"
+                  : "ブロック"}
+              </Text>
+            </Pressable>
+            <TextInput
+              placeholder="スパム報告の理由を入力"
+              placeholderTextColor="#94a3b8"
+              style={[styles.input, styles.textArea]}
+              multiline
+              value={spamReasonDraft}
+              onChangeText={setSpamReasonDraft}
+            />
+            <Pressable
+              style={[styles.primaryButton, styles.userActionMenuSubmit]}
+              onPress={() => {
+                void reportUserAsSpam({
+                  targetUid: userActionMenuState.targetUid,
+                  targetName: userActionMenuState.targetName,
+                  reason: spamReasonDraft,
+                });
+                closeUserActionMenu();
+              }}
+            >
+              <Text style={styles.primaryButtonText}>スパム報告を送信</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
-
-function RegistrationHeader({
-  title,
-  description,
-  onBack,
-}: {
-  title: string;
-  description: string;
-  onBack: () => void;
-}) {
-  return (
-    <View style={styles.pageHeaderCard}>
-      <Pressable onPress={onBack} style={styles.backButton}>
-        <Text style={styles.backButtonText}>戻る</Text>
-      </Pressable>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{description}</Text>
-    </View>
-  );
-}
-
-function PageIntro({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <View style={styles.pageIntroCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{description}</Text>
-    </View>
-  );
-}
-
-function RichTextToolbar({
-  onFormat,
-}: {
-  onFormat: (action: RichFormatAction) => void;
-}) {
-  const actions: Array<{ key: RichFormatAction; label: string }> = [
-    { key: "bold", label: "太字" },
-    { key: "bullet", label: "箇条書き" },
-    { key: "quote", label: "引用" },
-  ];
-
-  return (
-    <View style={styles.richToolbar}>
-      {actions.map((action) => (
-        <Pressable
-          key={action.key}
-          style={styles.richToolbarButton}
-          onPress={() => onFormat(action.key)}
-        >
-          <Text style={styles.richToolbarButtonText}>{action.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function ActivityBadgeSection({
-  badges,
-  onOpen,
-}: {
-  badges: ActivityBadge[];
-  onOpen: () => void;
-}) {
-  if (badges.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.badgeSection}>
-      <Text style={styles.badgeSectionTitle}>活動バッジ</Text>
-      <Pressable style={styles.badgeLauncher} onPress={onOpen}>
-        <View style={styles.badgePreviewRow}>
-          {badges.slice(0, 4).map((badge) => (
-            <View key={`${badge.id}-${badge.tier}`} style={styles.badgeStackedWrap}>
-              <View
-                style={[
-                  styles.kBadge,
-                  badge.tier === "bronze"
-                    ? styles.badgeBronze
-                    : badge.tier === "silver"
-                      ? styles.badgeSilver
-                      : styles.badgeGold,
-                ]}
-              >
-                <View style={styles.kBadgeInner}>
-                  <Text style={styles.kBadgeText}>K</Text>
-                </View>
-              </View>
-              <View style={styles.badgeRibbon}>
-                <Text style={styles.badgeRibbonText}>
-                  {badge.tier === "bronze"
-                    ? "B"
-                    : badge.tier === "silver"
-                      ? "S"
-                      : "G"}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-        <View style={styles.badgeLauncherTextWrap}>
-          <Text style={styles.badgeLauncherTitle}>{badges.length}個のバッジを確認</Text>
-          <Text style={styles.badgeLauncherMeta}>押すと詳細が開きます</Text>
-        </View>
-      </Pressable>
-    </View>
-  );
-}
-
-function RichTextRenderer({
-  content,
-  variant = "body",
-  compact = false,
-  onOpenUrl,
-}: {
-  content: string;
-  variant?: "body" | "detail" | "reply";
-  compact?: boolean;
-  onOpenUrl?: (url: string, label?: string) => void;
-}) {
-  if (!content.trim()) {
-    return null;
-  }
-
-  const handleOpenUrl = onOpenUrl ?? (() => {});
-  const lines = content.split("\n");
-  const baseStyle =
-    variant === "detail"
-      ? styles.postDetailBody
-      : variant === "reply"
-        ? styles.replyBody
-        : styles.cardBody;
-
-  return (
-    <View style={[styles.richTextStack, compact && styles.richTextStackCompact]}>
-      {lines.map((rawLine, index) => {
-        const line = rawLine.trimEnd();
-
-        if (!line.trim()) {
-          return <View key={`space-${index}`} style={styles.richTextSpacer} />;
-        }
-
-        const quoteMatch = line.match(/^>\s?(.*)$/);
-        if (quoteMatch) {
-          return (
-            <View key={`quote-${index}`} style={styles.richQuoteBlock}>
-              <Text style={[baseStyle, compact && styles.richTextCompact]}>
-                {renderLinkableTextSegments({
-                  text: quoteMatch[1],
-                  baseStyle: [baseStyle, compact && styles.richTextCompact],
-                  boldStyle: styles.richTextBold,
-                  linkStyle: styles.richTextLink,
-                  onOpenUrl: handleOpenUrl,
-                })}
-              </Text>
-            </View>
-          );
-        }
-
-        const bulletMatch = line.match(/^[-*]\s+(.*)$/);
-        if (bulletMatch) {
-          return (
-            <View key={`bullet-${index}`} style={styles.richListRow}>
-              <Text style={styles.richBullet}>•</Text>
-              <Text style={[baseStyle, styles.richListText, compact && styles.richTextCompact]}>
-                {renderLinkableTextSegments({
-                  text: bulletMatch[1],
-                  baseStyle: [baseStyle, styles.richListText, compact && styles.richTextCompact],
-                  boldStyle: styles.richTextBold,
-                  linkStyle: styles.richTextLink,
-                  onOpenUrl: handleOpenUrl,
-                })}
-              </Text>
-            </View>
-          );
-        }
-
-        return (
-          <Text
-            key={`text-${index}`}
-            style={[baseStyle, compact && styles.richTextCompact]}
-          >
-            {renderLinkableTextSegments({
-              text: line,
-              baseStyle: [baseStyle, compact && styles.richTextCompact],
-              boldStyle: styles.richTextBold,
-              linkStyle: styles.richTextLink,
-              onOpenUrl: handleOpenUrl,
-            })}
-          </Text>
-        );
-      })}
-    </View>
-  );
-}
-
-function LinkPreviewCard({
-  url,
-  onOpenUrl,
-}: {
-  url: string;
-  onOpenUrl: (url: string, label?: string) => void;
-}) {
-  const domainLabel = buildUrlPreviewLabel(url);
-
-  return (
-    <Pressable style={styles.linkPreviewCard} onPress={() => onOpenUrl(url, domainLabel)}>
-      <Text style={styles.linkPreviewDomain}>{domainLabel}</Text>
-      <Text style={styles.linkPreviewUrl}>{url}</Text>
-      <Text style={styles.linkPreviewHint}>外部サイトを開く</Text>
-    </Pressable>
-  );
-}
-
-function ExpandableBody({
-  id,
-  content,
-  compact = false,
-  onToggle,
-  expanded,
-  onOpenUrl,
-}: {
-  id: string;
-  content: string;
-  compact?: boolean;
-  onToggle: (id: string) => void;
-  expanded: boolean;
-  onOpenUrl: (url: string, label?: string) => void;
-}) {
-  const collapsed = shouldCollapseBody(content) && !expanded;
-  const visibleContent = collapsed ? getCollapsedBody(content) : content;
-  const previewUrl = extractFirstUrl(content);
-
-  return (
-    <View>
-      <RichTextRenderer
-        content={visibleContent}
-        compact={compact}
-        onOpenUrl={onOpenUrl}
-      />
-      {previewUrl ? <LinkPreviewCard url={previewUrl} onOpenUrl={onOpenUrl} /> : null}
-      {shouldCollapseBody(content) ? (
-        <Pressable onPress={() => onToggle(id)}>
-          <Text style={styles.expandToggleText}>{expanded ? "閉じる" : "もっと見る"}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function ReplyList({
-  replies,
-  compact = false,
-}: {
-  replies: Reply[];
-  compact?: boolean;
-}) {
-  if (replies.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.replyList}>
-      {replies.map((reply) => (
-        <View key={reply.id} style={styles.replyItem}>
-          <Text style={styles.replyAuthor}>{reply.author}</Text>
-          <RichTextRenderer content={reply.body} variant="reply" compact={compact} />
-          <MediaGallery media={reply.media} compact={compact} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function FeedbackBanner({
-  kind,
-  message,
-}: {
-  kind: "success" | "error";
-  message: string;
-}) {
-  return (
-    <View
-      style={[
-        styles.feedbackBanner,
-        kind === "success" ? styles.feedbackSuccess : styles.feedbackError,
-      ]}
-    >
-      <Text
-        style={[
-          styles.feedbackText,
-          kind === "success" ? styles.feedbackSuccessText : styles.feedbackErrorText,
-        ]}
-      >
-        {message}
-      </Text>
-    </View>
-  );
-}
-
-function getImageDisplayStyle(
-  media: Pick<MediaAttachment, "width" | "height">,
-  compact = false
-) {
-  const fallbackHeight = compact ? 180 : 240;
-
-  if (!media.width || !media.height) {
-    return compact ? styles.postMediaImageCompact : styles.postMediaImage;
-  }
-
-  return {
-    width: "100%" as const,
-    aspectRatio: media.width / media.height,
-    maxHeight: compact ? 180 : 420,
-    minHeight: fallbackHeight,
-    borderRadius: 18,
-    backgroundColor: colors.brandSoft,
-  };
-}
-
-function MediaGallery({
-  media,
-  compact = false,
-}: {
-  media?: MediaAttachment[];
-  compact?: boolean;
-}) {
-  if (!media || media.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.mediaGallery}>
-      {media.map((item) =>
-        item.kind === "image" ? (
-          <Image
-            key={`${item.url}-${item.fileName}`}
-            source={{ uri: item.url }}
-            style={getImageDisplayStyle(item, compact)}
-            resizeMode="contain"
-          />
-        ) : (
-          <View key={`${item.url}-${item.fileName}`} style={styles.videoCard}>
-            <Text style={styles.videoCardLabel}>動画を添付済み</Text>
-            <Text style={styles.videoCardName}>{item.fileName}</Text>
-          </View>
-        )
-      )}
-    </View>
-  );
-}
-
-function ComposeMediaPreview({
-  media,
-  onRemove,
-}: {
-  media: LocalMediaAsset[];
-  onRemove: (id: string) => void;
-}) {
-  if (media.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.mediaPreviewStack}>
-      {media.map((item) => (
-        <View key={item.id} style={styles.mediaPreviewCard}>
-          {item.kind === "image" ? (
-            <Image
-              source={{ uri: item.uri }}
-              style={getImageDisplayStyle(item)}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.mediaPreviewVideo}>
-              <Text style={styles.videoCardLabel}>動画を選択済み</Text>
-              <Text style={styles.videoCardName}>{item.fileName}</Text>
-            </View>
-          )}
-          <Pressable
-            style={styles.mediaRemoveButton}
-            onPress={() => onRemove(item.id)}
-          >
-            <Text style={styles.mediaRemoveButtonText}>削除</Text>
-          </Pressable>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function SportSelector({
-  title,
-  detail,
-  groups,
-  selectedSports,
-  onToggle,
-}: {
-  title: string;
-  detail: string;
-  groups: Array<{ category: string; items: string[] }>;
-  selectedSports: string[];
-  onToggle: (sport: string) => void;
-}) {
-  return (
-    <View style={styles.formGroup}>
-      <View style={styles.formLabelRow}>
-        <Text style={styles.formLabel}>{title}</Text>
-        <Text style={styles.formDetail}>{detail}</Text>
-      </View>
-      <Text style={styles.fieldSupport}>
-        現在担当していない種目でも、見ておきたいものは複数選択できます。
-      </Text>
-      <View style={styles.sportGroupStack}>
-        {groups.map((group) => (
-          <View key={group.category} style={styles.sportGroupCard}>
-            <Text style={styles.sportGroupTitle}>{group.category}</Text>
-            <View style={styles.sportSelectorGrid}>
-              {group.items.map((sport) => {
-                const selected = selectedSports.includes(sport);
-                return (
-                  <Pressable
-                    key={sport}
-                    style={[
-                      styles.sportSelectorChip,
-                      selected && styles.sportSelectorChipActive,
-                    ]}
-                    onPress={() => onToggle(sport)}
-                  >
-                    <Text
-                      style={[
-                        styles.sportSelectorChipText,
-                        selected && styles.sportSelectorChipTextActive,
-                      ]}
-                    >
-                      {sport}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function KomonityLogo() {
-  return (
-    <View style={styles.logoWrap}>
-      <Text style={styles.logoText}>Komonity</Text>
-      <View style={styles.logoUnderlineWrap}>
-        <View style={styles.logoUnderline} />
-        <View style={[styles.logoDot, styles.logoDotOne]} />
-        <View style={[styles.logoDot, styles.logoDotTwo]} />
-        <View style={[styles.logoDot, styles.logoDotThree]} />
-      </View>
-    </View>
-  );
-}
-
-function ImageField({
-  title,
-  detail,
-  imageUri,
-  kind,
-  onPress,
-  onRemove,
-}: {
-  title: string;
-  detail: string;
-  imageUri: string | null;
-  kind: "avatar" | "cover";
-  onPress: () => void;
-  onRemove?: () => void;
-}) {
-  return (
-    <View style={styles.formGroup}>
-      <View style={styles.formLabelRow}>
-        <Text style={styles.formLabel}>{title}</Text>
-        <Text style={styles.formDetail}>{detail}</Text>
-      </View>
-      <Pressable style={styles.imagePickerCard} onPress={onPress}>
-        {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={kind === "cover" ? styles.coverPreview : styles.avatarPreview}
-          />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarPlaceholderText}>画像を選択</Text>
-            <Text style={styles.fieldSupport}>
-              {kind === "cover"
-                ? "デバイス内の写真からプロフィール上部のヘッダー画像を設定します"
-                : "デバイス内の写真からアイコン画像を設定します"}
-            </Text>
-          </View>
-        )}
-      </Pressable>
-      {imageUri && onRemove ? (
-        <Pressable style={styles.removeImageButton} onPress={onRemove}>
-          <Text style={styles.removeImageButtonText}>
-            {kind === "cover"
-              ? "ヘッダー画像を削除してデフォルトに戻す"
-              : "アイコン画像を削除してデフォルトに戻す"}
-          </Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function FormField({
-  label,
-  detail,
-  placeholder,
-  multiline,
-  value,
-  onChangeText,
-  maxLength,
-}: {
-  label: string;
-  detail: string;
-  placeholder: string;
-  multiline: boolean;
-  value: string;
-  onChangeText: (value: string) => void;
-  maxLength?: number;
-}) {
-  return (
-    <View style={styles.formGroup}>
-      <View style={styles.formLabelRow}>
-        <Text style={styles.formLabel}>{label}</Text>
-        <Text style={styles.formDetail}>
-          {maxLength ? `${detail} / ${value.length}/${maxLength}` : detail}
-        </Text>
-      </View>
-      <TextInput
-        placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
-        multiline={multiline}
-        secureTextEntry={label.includes("パスワード")}
-        autoCapitalize={label.includes("メールアドレス") ? "none" : "sentences"}
-        keyboardType={label.includes("メールアドレス") ? "email-address" : "default"}
-        style={[styles.input, multiline && styles.textArea]}
-        value={value}
-        onChangeText={onChangeText}
-        maxLength={maxLength}
-      />
-    </View>
-  );
-}
-
-function getAdvisorFieldKey(label: string): keyof AdvisorFormState {
-  switch (label) {
-    case "ニックネーム":
-      return "nickname";
-    case "表示ID":
-      return "handle";
-    case "担当部活":
-      return "club";
-    case "担当歴":
-      return "experience";
-    case "ログイン用メールアドレス":
-      return "loginEmail";
-    case "ログイン用パスワード":
-      return "loginPassword";
-    default:
-      return "nickname";
-  }
-}
-
-function getAdvisorFieldValue(
-  label: string,
-  form: AdvisorFormState
-): string {
-  return String(form[getAdvisorFieldKey(label)]);
-}
-
-function getCoachFieldKey(label: string): keyof CoachFormState {
-  switch (label) {
-    case "ニックネーム":
-      return "nickname";
-    case "表示ID":
-      return "handle";
-    case "専門種目":
-      return "specialty";
-    case "指導歴":
-      return "experience";
-    case "今までの経歴や功績":
-      return "achievements";
-    case "電話番号":
-      return "phone";
-    case "メールアドレス":
-      return "publicEmail";
-    case "ログイン用メールアドレス":
-      return "loginEmail";
-    case "ログイン用パスワード":
-      return "loginPassword";
-    default:
-      return "nickname";
-  }
-}
-
-function getCoachFieldValue(
-  label: string,
-  form: CoachFormState
-): string {
-  return String(form[getCoachFieldKey(label)]);
-}
-
-function toAuthErrorMessage(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof error.code === "string"
-  ) {
-    switch (error.code) {
-      case "auth/email-already-in-use":
-        return "このメールアドレスはすでに使用されています。";
-      case "auth/invalid-email":
-        return "メールアドレスの形式が正しくありません。";
-      case "auth/weak-password":
-        return "パスワードが弱すぎます。8文字以上を目安に設定してください。";
-      case "auth/invalid-credential":
-        return "メールアドレスまたはパスワードが正しくありません。";
-      case "auth/api-key-not-valid":
-        return "認証設定に問題があります。管理者へお問い合わせください。";
-      default:
-        return "認証処理に失敗しました。時間をおいて再度お試しください。";
-    }
-  }
-
-  return "処理に失敗しました。入力内容を確認して、時間をおいて再度お試しください。";
-}
-
-function toSaveErrorMessage(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof error.code === "string"
-  ) {
-    switch (error.code) {
-      case "permission-denied":
-        return "この操作は現在許可されていません。";
-      case "storage/unauthorized":
-        return "画像または動画の追加が現在許可されていません。";
-      case "storage/canceled":
-        return "画像または動画の追加がキャンセルされました。";
-      case "storage/unknown":
-        return "画像または動画の追加に失敗しました。";
-      case "unavailable":
-        return "現在接続しにくくなっています。時間をおいて再度お試しください。";
-      case "not-found":
-        return "必要なデータが見つかりませんでした。";
-      default:
-        return "保存処理に失敗しました。時間をおいて再度お試しください。";
-    }
-  }
-
-  if (error instanceof Error && error.message === "firestore-save-timeout") {
-    return "保存処理が混み合っています。時間をおいて再度お試しください。";
-  }
-
-  return "保存処理に失敗しました。時間をおいて再度お試しください。";
-}
-
-const colors = {
-  background: "#f4efe6",
-  surface: "#fffdf8",
-  surfaceStrong: "#fff5dd",
-  text: "#1f2430",
-  muted: "#6b7280",
-  line: "#dfd3bf",
-  brand: "#b45309",
-  brandSoft: "#fde7c2",
-  accent: "#0f766e",
-  accentSoft: "#d7f2ee",
-  success: "#166534",
-  successSoft: "#dcfce7",
-  error: "#b91c1c",
-  errorSoft: "#fee2e2",
-};
-
-const DefaultAvatarIcon = ({
-  size,
-  tone = "brand",
-}: {
-  size: number;
-  tone?: "brand" | "light";
-}) => {
-  const fillColor = tone === "light" ? "#fff7ed" : colors.brand;
-  const accentColor =
-    tone === "light" ? "rgba(255, 247, 237, 0.72)" : "#e2b276";
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <View
-        style={{
-          width: size * 0.38,
-          height: size * 0.38,
-          borderRadius: 999,
-          backgroundColor: fillColor,
-          marginBottom: size * 0.05,
-        }}
-      />
-      <View
-        style={{
-          width: size * 0.66,
-          height: size * 0.34,
-          borderTopLeftRadius: size * 0.24,
-          borderTopRightRadius: size * 0.24,
-          borderBottomLeftRadius: size * 0.12,
-          borderBottomRightRadius: size * 0.12,
-          backgroundColor: fillColor,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          bottom: size * 0.08,
-          width: size * 0.78,
-          height: size * 0.2,
-          borderRadius: 999,
-          backgroundColor: accentColor,
-          opacity: 0.8,
-        }}
-      />
-    </View>
-  );
-};
-
-const AvatarVisual = ({
-  size,
-  imageUri,
-  tone = "brand",
-}: {
-  size: number;
-  imageUri?: string;
-  tone?: "brand" | "light";
-}) => {
-  if (imageUri) {
-    return (
-      <Image
-        source={{ uri: imageUri }}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: 999,
-        }}
-      />
-    );
-  }
-
-  return <DefaultAvatarIcon size={size} tone={tone} />;
-};
-
-const ProfileBannerVisual = ({
-  imageUri,
-  tone,
-}: {
-  imageUri?: string;
-  tone: string;
-}) => {
-  if (imageUri) {
-    return (
-      <Image
-        source={{ uri: imageUri }}
-        style={styles.profileBannerImage}
-        resizeMode="cover"
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.profileBanner,
-        { backgroundColor: createCoverToneFromName(tone) },
-      ]}
-    />
-  );
-};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -9040,6 +8191,31 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     gap: 16,
   },
+  timelineScreen: {
+    flex: 1,
+    minHeight: 0,
+    paddingBottom: 5,
+    gap: 6,
+  },
+  timelineIntroBar: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  timelineIntroTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  timelineIntroText: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
   searchPageContainer: {
     paddingBottom: 48,
   },
@@ -9059,6 +8235,8 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.line,
     paddingHorizontal: 18,
     paddingTop: 86,
+  },
+  sideMenuContent: {
     paddingBottom: 24,
     gap: 10,
   },
@@ -9126,6 +8304,80 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
+  timelineSectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 50,
+    height: 50,
+    maxHeight: 50,
+    paddingHorizontal: 4,
+    paddingBottom: 0,
+    paddingRight: 16,
+    gap: 8,
+  },
+  timelineSectionScrollShell: {
+    width: "100%",
+    height: 50,
+    minHeight: 50,
+    maxHeight: 50,
+    flexBasis: 50,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignSelf: "stretch",
+    overflow: "hidden",
+  },
+  timelineSectionScroll: {
+    width: "100%",
+    height: 50,
+    minHeight: 50,
+    maxHeight: 50,
+    flexBasis: 50,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignSelf: "stretch",
+    overflow: "hidden",
+  },
+  timelineSectionChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#fbfaf7",
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  timelineSectionChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  timelineSectionChipText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  timelineSectionChipTextActive: {
+    color: colors.surface,
+  },
+  timelinePager: {
+    flex: 1,
+    minHeight: 0,
+  },
+  timelinePage: {
+    flex: 1,
+  },
+  timelineContentShell: {
+    width: "100%",
+    marginTop: 0,
+    paddingTop: 0,
+  },
+  timelineContentScroller: {
+    width: "100%",
+    marginTop: 0,
+  },
+  timelinePageContent: {
+    gap: 10,
+    paddingTop: 0,
+    paddingBottom: 10,
+  },
   heroActions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -9140,6 +8392,16 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#ffffff",
     fontWeight: "700",
+  },
+  textLinkButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    alignSelf: "center",
+  },
+  textLinkButtonText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "800",
   },
   secondaryButton: {
     backgroundColor: colors.brandSoft,
@@ -9775,6 +9037,53 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 4,
   },
+  accountDeleteSection: {
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  accountDeleteTitle: {
+    color: colors.error,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  accountDeleteBody: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 22,
+  },
+  accountDeleteButton: {
+    alignSelf: "stretch",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.error,
+    backgroundColor: colors.errorSoft,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  accountDeleteButtonText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  legalSection: {
+    gap: 8,
+    paddingBottom: 8,
+  },
+  legalSectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  legalSectionBody: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 22,
+  },
   mediaActionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -10291,11 +9600,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
-  profileLink: {
-    color: colors.accent,
-    fontSize: 14,
-    fontWeight: "700",
-  },
   profileJoined: {
     color: colors.muted,
     fontSize: 14,
@@ -10626,6 +9930,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  postDeleteButton: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.errorSoft,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  postDeleteButtonText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: "800",
+  },
   postDetailMetricRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -10772,6 +10088,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(22, 28, 45, 0.32)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
   modalCard: {
     width: "100%",
     maxWidth: 460,
@@ -10820,6 +10145,45 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "800",
+  },
+  modalDangerButton: {
+    borderRadius: 999,
+    backgroundColor: colors.error,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  modalDangerButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  userActionMenuCard: {
+    width: "100%",
+    maxWidth: 460,
+    alignSelf: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 24,
+    gap: 14,
+  },
+  userActionMenuItem: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: "#fbfaf7",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  userActionMenuItemText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  userActionMenuSubmit: {
+    alignSelf: "stretch",
+    alignItems: "center",
   },
   profilePostHeaderText: {
     gap: 2,

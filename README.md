@@ -353,10 +353,40 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
 
+    // 投稿削除はアプリ側で isDeleted=true のソフト削除として扱っています。
+    // そのため delete を許可していなくても、update があれば投稿削除は動作します。
+
     match /follows/{followId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.followerUid == request.auth.uid;
       allow delete: if request.auth != null;
+    }
+
+    match /blocks/{blockId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.blockerUid == request.auth.uid;
+      allow delete: if request.auth != null;
+    }
+
+    match /post_alerts/{alertId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.watcherUid == request.auth.uid;
+      allow delete: if request.auth != null;
+    }
+
+    match /spam_reports/{reportId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.reporterUid == request.auth.uid;
+    }
+
+    match /contact_inquiries/{inquiryId} {
+      allow read: if request.auth != null;
+      allow create: if true;
+    }
+
+    match /mail/{mailId} {
+      allow read: if false;
+      allow create: if true;
     }
 
     match /post_likes/{likeId} {
@@ -412,6 +442,19 @@ service firebase.storage {
 ```
 
 `profile-icons` はアイコン画像、`profile-covers` はプロフィール上部のヘッダー画像で使います。プロフィール画像やヘッダー画像の保存で `403 Forbidden` が出る場合は、このルールが未反映であることが多いです。
+
+## お問い合わせと通報メール
+
+アプリ内の `お問い合わせ` と `スパム報告` は、Firestore の `mail` コレクションにメール送信指示を書き込む実装です。実際に `komonity.official@gmail.com` へメールを送るには、Firebase Extension の `Trigger Email`（正式名称: Firestore Send Email）を Firebase プロジェクトに追加してください。
+
+- 送信先アドレス
+  - `komonity.official@gmail.com`
+- Firestore へ書き込まれるコレクション
+  - `mail`
+
+拡張機能を入れたあと、SMTP 設定に `komonity.official@gmail.com` を設定すると、アプリから作成された `mail` ドキュメントをもとにメールが送信されます。
+
+パスワード再設定メール本文の変更は、Firebase console の `Authentication` → `Templates` から行えます。日本語の件名や本文に変更したい場合は、`Password reset` テンプレートを編集してください。
 
 ## Firebase 連携ファイル
 
