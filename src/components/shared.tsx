@@ -25,6 +25,7 @@ import {
 
 type SharedStyles = Record<string, any>;
 const EMPTY_STYLES: SharedStyles = sharedStyles;
+const KOMONITY_LOGO_SOURCE = require("../../assets/logo-komonity-script.svg");
 
 type RenderLinkableTextSegmentsOptions = {
   text: string;
@@ -642,13 +643,7 @@ export function KomonityLogo({
 }) {
   return (
     <View style={styles.logoWrap}>
-      <Text style={styles.logoText}>Komonity</Text>
-      <View style={styles.logoUnderlineWrap}>
-        <View style={styles.logoUnderline} />
-        <View style={[styles.logoDot, styles.logoDotOne]} />
-        <View style={[styles.logoDot, styles.logoDotTwo]} />
-        <View style={[styles.logoDot, styles.logoDotThree]} />
-      </View>
+      <Image source={KOMONITY_LOGO_SOURCE} style={styles.logoImage} resizeMode="contain" />
     </View>
   );
 }

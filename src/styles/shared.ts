@@ -409,45 +409,12 @@ export const sharedStyles = StyleSheet.create({
     color: "#ffffff",
   },
   logoWrap: {
-    gap: 2,
+    width: 168,
+    height: 56,
   },
-  logoText: {
-    color: colors.brand,
-    fontSize: 34,
-    fontWeight: "900",
-    fontStyle: "italic",
-    letterSpacing: -1,
-  },
-  logoUnderlineWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: -2,
-    paddingLeft: 4,
-  },
-  logoUnderline: {
-    width: 104,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: colors.accent,
-  },
-  logoDot: {
-    borderRadius: 999,
-    backgroundColor: colors.brand,
-  },
-  logoDotOne: {
-    width: 8,
-    height: 8,
-  },
-  logoDotTwo: {
-    width: 6,
-    height: 6,
-    opacity: 0.85,
-  },
-  logoDotThree: {
-    width: 8,
-    height: 8,
-    backgroundColor: colors.accent,
+  logoImage: {
+    width: "100%",
+    height: "100%",
   },
   imagePickerCard: {
     borderRadius: 24,

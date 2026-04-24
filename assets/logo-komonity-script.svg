@@ -1,7 +1,5 @@
 <svg width="960" height="320" viewBox="0 0 960 320" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="960" height="320" rx="40" fill="#FFFDF8"/>
-  <path d="M118 233C182 253 278 261 370 250C474 238 563 199 648 207C706 212 762 238 824 237" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
-  <path d="M764 233C782 228 796 220 809 207" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
   <text
     x="84"
     y="182"
@@ -15,7 +13,9 @@
   >
     Komonity
   </text>
-  <circle cx="678" cy="84" r="10" fill="#0F766E"/>
-  <circle cx="712" cy="64" r="8" fill="#B45309"/>
-  <circle cx="736" cy="90" r="6" fill="#0F766E"/>
+  <path d="M116 236C190 257 302 262 412 253C502 246 574 225 638 222C688 220 731 228 774 236" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
+  <path d="M730 232C746 227 758 218 768 206" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="640" cy="84" r="10" fill="#0F766E"/>
+  <circle cx="678" cy="66" r="8" fill="#B45309"/>
+  <circle cx="706" cy="92" r="6" fill="#0F766E"/>
 </svg>
