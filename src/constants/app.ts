@@ -9,12 +9,14 @@ import type {
   FeedPost,
   LoginFormState,
   PostDetailState,
+  PracticeMenuTemplate,
   ProfileState,
   QuestionPost,
   ReplyDetailState,
   RelationshipListState,
   ScreenKey,
   SearchContentFilterKey,
+  TodayMenuConditionKey,
   TextSelectionRange,
   TimelineSectionKey,
   UserActionMenuState,
@@ -111,6 +113,51 @@ export const coachRegistrationFields = [
     placeholder: "例: 全国大会出場3回、指導者研修講師など",
   },
   {
+    label: "得意分野",
+    detail: "任意項目",
+    placeholder: "例: 守備戦術、初心者指導、メンタルサポート",
+  },
+  {
+    label: "対応できる悩み",
+    detail: "任意項目",
+    placeholder: "例: 部員の技術差、短時間練習、怪我予防",
+  },
+  {
+    label: "資格",
+    detail: "任意項目",
+    placeholder: "例: 公認指導者資格、トレーナー資格など",
+  },
+  {
+    label: "所属スクール",
+    detail: "任意項目",
+    placeholder: "例: Komonityスポーツスクール",
+  },
+  {
+    label: "YouTube",
+    detail: "任意項目",
+    placeholder: "例: https://youtube.com/@komonity",
+  },
+  {
+    label: "X / Twitter",
+    detail: "任意項目",
+    placeholder: "例: https://x.com/komonity",
+  },
+  {
+    label: "Instagram",
+    detail: "任意項目",
+    placeholder: "例: https://instagram.com/komonity",
+  },
+  {
+    label: "相談受付可否",
+    detail: "任意項目",
+    placeholder: "例: 受付可 / 現在は受付停止中",
+  },
+  {
+    label: "有料相談可否",
+    detail: "任意項目",
+    placeholder: "例: 対応可 / 準備中 / 対応不可",
+  },
+  {
     label: "電話番号",
     detail: "任意項目 / 入力すると公開",
     placeholder: "例: 090-1234-5678",
@@ -133,6 +180,7 @@ export const coachRegistrationFields = [
 ] as const;
 
 export const DEFAULT_PUBLIC_SITE_URL = "https://komonity-510b7.web.app";
+export const DEFAULT_OG_IMAGE_URL = `${DEFAULT_PUBLIC_SITE_URL}/ogp.png`;
 export const SUPPORT_EMAIL_ADDRESS = "komonity.official@gmail.com";
 
 export const defaultProfileState: ProfileState = {
@@ -149,12 +197,23 @@ export const defaultProfileState: ProfileState = {
   followers: "0",
   posts: "0",
   selectedSports: [],
+  strengths: "",
+  supportTopics: "",
+  certifications: "",
+  organization: "",
+  youtubeUrl: "",
+  xUrl: "",
+  instagramUrl: "",
+  consultationAvailable: false,
+  paidConsultationAvailable: false,
 };
 
 export const myPageTabs = [
   { key: "posts", label: "投稿" },
   { key: "answers", label: "回答" },
   { key: "best_answers", label: "ベストアンサー" },
+  { key: "likes", label: "いいね" },
+  { key: "bookmarks", label: "保存" },
 ] as const;
 
 export const searchTabs = [
@@ -188,6 +247,15 @@ export const initialCoachForm: CoachFormState = {
   specialty: "",
   experience: "",
   achievements: "",
+  strengths: "",
+  supportTopics: "",
+  certifications: "",
+  organization: "",
+  youtubeUrl: "",
+  xUrl: "",
+  instagramUrl: "",
+  consultationAvailable: "",
+  paidConsultationAvailable: "",
   phone: "",
   publicEmail: "",
   loginEmail: "",
@@ -206,11 +274,53 @@ export const initialContactForm: ContactFormState = {
   body: "",
 };
 
+export const initialPracticeMenu: PracticeMenuTemplate = {
+  sport: "",
+  targetLevel: "",
+  grade: "",
+  participants: "",
+  durationMinutes: "",
+  tools: "",
+  purpose: "",
+  steps: "",
+  cautions: "",
+  commonMistakes: "",
+  arrangements: "",
+  conditionTags: [],
+};
+
+export const practiceLevelOptions = ["初心者", "初級", "中級", "上級", "大会前"] as const;
+
+export const schoolGradeOptions = [
+  "小学生",
+  "中学1年",
+  "中学2年",
+  "中学3年",
+  "高校1年",
+  "高校2年",
+  "高校3年",
+  "全学年",
+] as const;
+
+export const todayMenuConditionOptions: Array<{
+  key: TodayMenuConditionKey;
+  label: string;
+  description: string;
+}> = [
+  { key: "under60", label: "60分以内", description: "短時間で回せるメニュー" },
+  { key: "beginner", label: "初心者多め", description: "基礎から始めやすい" },
+  { key: "rainy", label: "雨・室内", description: "外が使えない日向け" },
+  { key: "preTournament", label: "大会前", description: "調整や確認に使える" },
+  { key: "fewTools", label: "道具少なめ", description: "準備物が少ない" },
+  { key: "mixedAbility", label: "体力差あり", description: "差があっても回しやすい" },
+];
+
 export const initialComposeState: ComposeState = {
   target: "feed",
   title: "",
   body: "",
   selectedSports: [],
+  practiceMenu: initialPracticeMenu,
 };
 
 export const INITIAL_SELECTION: TextSelectionRange = {

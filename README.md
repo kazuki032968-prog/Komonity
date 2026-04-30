@@ -333,28 +333,32 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
       allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     match /timeline_posts/{postId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null;
+      allow delete: if request.auth != null && resource.data.createdByUid == request.auth.uid;
     }
 
     match /question_posts/{postId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null;
+      allow delete: if request.auth != null && resource.data.createdByUid == request.auth.uid;
     }
 
     match /community_posts/{postId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null;
+      allow delete: if request.auth != null && resource.data.createdByUid == request.auth.uid;
     }
 
-    // 投稿削除はアプリ側で isDeleted=true のソフト削除として扱っています。
-    // そのため delete を許可していなくても、update があれば投稿削除は動作します。
+    // 通常の投稿削除は isDeleted=true のソフト削除、
+    // アカウント削除時は本人の投稿を Firestore から削除するため delete も許可します。
 
     match /follows/{followId} {
       allow read: if request.auth != null;

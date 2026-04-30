@@ -28,12 +28,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
@@ -75,6 +77,7 @@ import {
   initialFeedPosts,
   initialLoginForm,
   initialPostDetailState,
+  initialPracticeMenu,
   initialQuestions,
   initialReplyDetailState,
   initialRelationshipListState,
@@ -89,15 +92,25 @@ import {
   RECENT_LOGIN_MAX_AGE_MS,
   registrationOptions,
   REPLY_BODY_MAX_LENGTH,
+  practiceLevelOptions,
+  schoolGradeOptions,
   searchContentFilters,
   searchTabs,
   sportGroups,
   staticScreenPathMap,
   SUPPORT_EMAIL_ADDRESS,
+  todayMenuConditionOptions,
   timelineSectionPathMap,
   timelineSections,
   VIDEO_FILE_SIZE_LIMIT_BYTES,
 } from "./src/constants/app";
+import {
+  mockCommunityPosts,
+  mockDirectoryAccounts,
+  mockDirectoryMetaMap,
+  mockFeedPosts,
+  mockQuestionPosts,
+} from "./src/constants/mockData";
 import { colors } from "./src/constants/theme";
 import { useTimelineSwipe } from "./src/hooks/useTimelineSwipe";
 import { useWebSeo } from "./src/hooks/useWebSeo";
@@ -123,8 +136,10 @@ import {
 } from "./src/services/profileService";
 import {
   normalizeMedia,
+  normalizePracticeMenu,
   normalizeReplies,
   toArrayOfStrings,
+  serializePracticeMenuForFirestore,
   serializeMediaForFirestore,
   serializeRepliesForFirestore,
 } from "./src/services/serializers";
@@ -154,6 +169,7 @@ import type {
   NotificationItem,
   PostAlertRecord,
   PostDetailState,
+  PracticeMenuTemplate,
   ProfileTabKey,
   ProfileAnswerItem,
   ProfilePostItem,
@@ -169,6 +185,7 @@ import type {
   SearchContentItem,
   SearchTabKey,
   TextSelectionRange,
+  TodayMenuConditionKey,
   TimelineSectionKey,
   TrendingCoachItem,
   UserActionMenuState,
@@ -260,18 +277,24 @@ export default function App() {
     useState<UserActionMenuState>(INITIAL_USER_ACTION_MENU_STATE);
   const [accountDeleteConfirmStep, setAccountDeleteConfirmStep] =
     useState<AccountDeleteConfirmStep>("idle");
-  const [directoryAccounts, setDirectoryAccounts] = useState<SearchAccountItem[]>([]);
-  const [directoryMetaMap, setDirectoryMetaMap] = useState<Record<string, UserDirectoryMeta>>({});
+  const [directoryAccounts, setDirectoryAccounts] =
+    useState<SearchAccountItem[]>(mockDirectoryAccounts);
+  const [directoryMetaMap, setDirectoryMetaMap] =
+    useState<Record<string, UserDirectoryMeta>>(mockDirectoryMetaMap);
   const [followRecords, setFollowRecords] = useState<FollowRecord[]>([]);
   const [blockRecords, setBlockRecords] = useState<BlockRecord[]>([]);
   const [postAlertRecords, setPostAlertRecords] = useState<PostAlertRecord[]>([]);
   const [likeRecords, setLikeRecords] = useState<InteractionRecord[]>([]);
   const [repostRecords, setRepostRecords] = useState<InteractionRecord[]>([]);
   const [bookmarkRecords, setBookmarkRecords] = useState<InteractionRecord[]>([]);
-  const [feedTimeline, setFeedTimeline] = useState<FeedPost[]>(initialFeedPosts);
-  const [questionBoard, setQuestionBoard] = useState<QuestionPost[]>(initialQuestions);
+  const [feedTimeline, setFeedTimeline] = useState<FeedPost[]>(
+    mergeItemsById(mockFeedPosts, initialFeedPosts)
+  );
+  const [questionBoard, setQuestionBoard] = useState<QuestionPost[]>(
+    mergeItemsById(mockQuestionPosts, initialQuestions)
+  );
   const [communityBoard, setCommunityBoard] =
-    useState<CommunityPost[]>(initialCommunityItems);
+    useState<CommunityPost[]>(mergeItemsById(mockCommunityPosts, initialCommunityItems));
   const [composeState, setComposeState] = useState<ComposeState>(initialComposeState);
   const [composeMedia, setComposeMedia] = useState<LocalMediaAsset[]>([]);
   const [composeBodySelection, setComposeBodySelection] =
@@ -282,6 +305,9 @@ export default function App() {
     useState<SearchTabKey>("trending-posts");
   const [activeSearchContentFilter, setActiveSearchContentFilter] =
     useState<SearchContentFilterKey>("all");
+  const [todayMenuConditions, setTodayMenuConditions] = useState<
+    TodayMenuConditionKey[]
+  >([]);
   const [activeTimelineSection, setActiveTimelineSection] =
     useState<TimelineSectionKey>("all");
   const [activeProfileTab, setActiveProfileTab] = useState<ProfileTabKey>("posts");
@@ -356,7 +382,8 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
-      setDirectoryAccounts([]);
+      setDirectoryAccounts(mockDirectoryAccounts);
+      setDirectoryMetaMap(mockDirectoryMetaMap);
       return;
     }
 
@@ -442,15 +469,49 @@ export default function App() {
                 : String(data.role ?? "")
             ),
             selectedSports: toArrayOfStrings(profileData.selectedSports),
+            strengths:
+              typeof profileData.strengths === "string" ? profileData.strengths : "",
+            supportTopics:
+              typeof profileData.supportTopics === "string"
+                ? profileData.supportTopics
+                : "",
+            certifications:
+              typeof profileData.certifications === "string"
+                ? profileData.certifications
+                : "",
+            organization:
+              typeof profileData.organization === "string"
+                ? profileData.organization
+                : "",
+            youtubeUrl:
+              typeof profileData.youtubeUrl === "string" ? profileData.youtubeUrl : "",
+            xUrl: typeof profileData.xUrl === "string" ? profileData.xUrl : "",
+            instagramUrl:
+              typeof profileData.instagramUrl === "string"
+                ? profileData.instagramUrl
+                : "",
+            consultationAvailable: profileData.consultationAvailable === true,
+            paidConsultationAvailable: profileData.paidConsultationAvailable === true,
           };
         });
 
-        setDirectoryAccounts(firestoreAccounts);
-        setDirectoryMetaMap(nextMetaMap);
+        const mergedAccounts = new Map<string, SearchAccountItem>();
+        mockDirectoryAccounts.forEach((account) => {
+          mergedAccounts.set(account.id, account);
+        });
+        firestoreAccounts.forEach((account) => {
+          mergedAccounts.set(account.id, account);
+        });
+
+        setDirectoryAccounts(Array.from(mergedAccounts.values()));
+        setDirectoryMetaMap({
+          ...mockDirectoryMetaMap,
+          ...nextMetaMap,
+        });
       },
       (error) => {
-        setDirectoryAccounts([]);
-        setDirectoryMetaMap({});
+        setDirectoryAccounts(mockDirectoryAccounts);
+        setDirectoryMetaMap(mockDirectoryMetaMap);
         setAuthError(
           `公開プロフィールの読込に失敗しました。${toSaveErrorMessage(error)}`
         );
@@ -690,6 +751,9 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
+      setFeedTimeline(mergeItemsById(mockFeedPosts, initialFeedPosts));
+      setQuestionBoard(mergeItemsById(mockQuestionPosts, initialQuestions));
+      setCommunityBoard(mergeItemsById(mockCommunityPosts, initialCommunityItems));
       return;
     }
 
@@ -732,12 +796,13 @@ export default function App() {
           comments: typeof data.comments === "number" ? data.comments : 0,
           replies: normalizeReplies(data.replies),
           media: normalizeMedia(data.media),
+          practiceMenu: normalizePracticeMenu(data.practiceMenu),
           createdAtMs: toTimestampMs(data.createdAt),
           isDeleted: data.isDeleted === true,
         }];
       });
 
-      setFeedTimeline(mergeItemsById([], firestorePosts));
+      setFeedTimeline(mergeItemsById(mockFeedPosts, firestorePosts));
     });
 
     const unsubscribeQuestions = onSnapshot(questionQuery, (snapshot) => {
@@ -775,7 +840,7 @@ export default function App() {
         }];
       });
 
-      setQuestionBoard(mergeItemsById([], firestoreQuestions));
+      setQuestionBoard(mergeItemsById(mockQuestionPosts, firestoreQuestions));
     });
 
     const unsubscribeCommunity = onSnapshot(communityQuery, (snapshot) => {
@@ -803,7 +868,7 @@ export default function App() {
         }];
       });
 
-      setCommunityBoard(mergeItemsById([], firestoreCommunities));
+      setCommunityBoard(mergeItemsById(mockCommunityPosts, firestoreCommunities));
     });
 
     return () => {
@@ -947,6 +1012,129 @@ export default function App() {
     );
   };
 
+  const renderPracticeMenu = (
+    menu?: PracticeMenuTemplate,
+    variant: "summary" | "detail" = "summary"
+  ) => {
+    if (!menu) {
+      return null;
+    }
+
+    const rows = [
+      ["対象レベル", menu.targetLevel],
+      ["学年", menu.grade],
+      ["人数", menu.participants],
+      ["練習時間", menu.durationMinutes],
+      ["必要な道具", menu.tools],
+      ["目的", menu.purpose],
+      ["手順", menu.steps],
+      ["注意点", menu.cautions],
+      ["よくある失敗", menu.commonMistakes],
+      ["アレンジ", menu.arrangements],
+    ].filter(([, value]) => value);
+    const visibleRows = variant === "summary" ? rows.slice(0, 5) : rows;
+
+    return (
+      <View style={styles.practiceMenuBox}>
+        <View style={styles.practiceMenuHeader}>
+          <Text style={styles.practiceMenuTitle}>練習メニュー</Text>
+          {menu.sport ? (
+            <View style={styles.searchSourceBadge}>
+              <Text style={styles.searchSourceBadgeText}>{menu.sport}</Text>
+            </View>
+          ) : null}
+        </View>
+        {visibleRows.map(([label, value]) => (
+          <View key={label} style={styles.practiceMenuRow}>
+            <Text style={styles.practiceMenuLabel}>{label}</Text>
+            <Text style={styles.practiceMenuValue}>{value}</Text>
+          </View>
+        ))}
+        {menu.conditionTags.length > 0 ? (
+          <View style={styles.sportChipRow}>
+            {menu.conditionTags.map((key) => {
+              const condition = todayMenuConditionOptions.find(
+                (option) => option.key === key
+              );
+              return condition ? (
+                <View key={key} style={styles.sportChip}>
+                  <Text style={styles.sportChipText}>{condition.label}</Text>
+                </View>
+              ) : null;
+            })}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  /**
+   * 指導者プロフィールを営業ページとしても使えるよう、強み・相談可否・外部導線をまとめて表示します。
+   */
+  const renderCoachProfileDetails = (profile: ProfileState) => {
+    if (!profile.role.includes("指導員")) {
+      return null;
+    }
+
+    const rows = [
+      ["得意分野", profile.strengths],
+      ["対応できる悩み", profile.supportTopics],
+      ["資格", profile.certifications],
+      ["所属スクール", profile.organization],
+    ].filter(([, value]) => Boolean(value.trim()));
+    const links = [
+      ["YouTube", profile.youtubeUrl],
+      ["X / Twitter", profile.xUrl],
+      ["Instagram", profile.instagramUrl],
+    ].filter(([, value]) => Boolean(value.trim()));
+
+    if (
+      rows.length === 0 &&
+      links.length === 0 &&
+      !profile.consultationAvailable &&
+      !profile.paidConsultationAvailable
+    ) {
+      return null;
+    }
+
+    return (
+      <View style={styles.coachProfileDetailBox}>
+        <Text style={styles.coachProfileDetailTitle}>指導者プロフィール</Text>
+        {rows.map(([label, value]) => (
+          <View key={label} style={styles.coachProfileDetailRow}>
+            <Text style={styles.coachProfileDetailLabel}>{label}</Text>
+            <Text style={styles.coachProfileDetailValue}>{value}</Text>
+          </View>
+        ))}
+        {links.length > 0 ? (
+          <View style={styles.externalLinksRow}>
+            {links.map(([label, url]) => (
+              <Pressable
+                key={label}
+                style={styles.externalLinkChip}
+                onPress={() => requestOpenExternalUrl(url, label)}
+              >
+                <Text style={styles.externalLinkChipText}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        <View style={styles.sportChipRow}>
+          {profile.consultationAvailable ? (
+            <View style={styles.sportChipActive}>
+              <Text style={styles.sportChipActiveText}>相談受付可</Text>
+            </View>
+          ) : null}
+          {profile.paidConsultationAvailable ? (
+            <View style={styles.sportChipActive}>
+              <Text style={styles.sportChipActiveText}>有料相談可</Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
+
   const completeAuthSuccess = (message: string) => {
     setAuthMessage(message);
     setCurrentScreen("mypage");
@@ -1001,6 +1189,9 @@ export default function App() {
     clearAuthFeedback();
     setCoachForm((current) => ({ ...current, [key]: value }));
   };
+
+  const toAvailabilityBoolean = (value: string) =>
+    /可|受付|対応|ok|yes|true/iu.test(value) && !/不可|停止|なし|no|false/iu.test(value);
 
   const updateLoginForm = (key: keyof LoginFormState, value: string) => {
     clearAuthFeedback();
@@ -1199,6 +1390,17 @@ export default function App() {
       ...(reply.replies ? collectReplyMediaUrls(reply.replies) : []),
     ]);
 
+  const postCollectionNames = [
+    COLLECTIONS.feed,
+    COLLECTIONS.questions,
+    COLLECTIONS.community,
+  ] as const;
+
+  const collectPostMediaUrlsFromDocument = (data: Record<string, unknown>) => [
+    ...normalizeMedia(data.media).map((item) => item.url),
+    ...collectReplyMediaUrls(normalizeReplies(data.replies)),
+  ];
+
   const deleteStorageFilesQuietly = async (urls: string[]) => {
     await Promise.all(
       urls.map(async (url) => {
@@ -1209,6 +1411,42 @@ export default function App() {
         }
       })
     );
+  };
+
+  /**
+   * 退会時に、本人が作成した投稿と投稿に添付されたメディアをまとめて削除します。
+   * Firestore の投稿ドキュメントを削除する前に URL を集め、削除後に Storage の実体も掃除します。
+   */
+  const deleteOwnedPostsAndMedia = async (uid: string) => {
+    if (!db) {
+      return;
+    }
+
+    const database = db;
+    const ownedPostSnapshots = await Promise.all(
+      postCollectionNames.map(async (collectionName) => ({
+        collectionName,
+        snapshot: await getDocs(
+          query(
+            collection(database, collectionName),
+            where("createdByUid", "==", uid)
+          )
+        ),
+      }))
+    );
+
+    const mediaUrls = ownedPostSnapshots.flatMap(({ snapshot }) =>
+      snapshot.docs.flatMap((postDoc) =>
+        collectPostMediaUrlsFromDocument(postDoc.data())
+      )
+    );
+
+    await Promise.all(
+      ownedPostSnapshots.flatMap(({ snapshot }) =>
+        snapshot.docs.map((postDoc) => deleteDoc(postDoc.ref))
+      )
+    );
+    await deleteStorageFilesQuietly(mediaUrls);
   };
 
   const deletePostFromDetail = async () => {
@@ -1449,8 +1687,18 @@ export default function App() {
   };
 
   const updateProfileDraft = (
-    key: Exclude<keyof ProfileState, "selectedSports" | "externalLinks">,
+    key: Exclude<
+      keyof ProfileState,
+      "selectedSports" | "externalLinks" | "consultationAvailable" | "paidConsultationAvailable"
+    >,
     value: string
+  ) => {
+    setProfileDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateProfileAvailability = (
+    key: "consultationAvailable" | "paidConsultationAvailable",
+    value: boolean
   ) => {
     setProfileDraft((current) => ({ ...current, [key]: value }));
   };
@@ -1627,6 +1875,17 @@ export default function App() {
         coverUrl: uploadedCoachCoverUrl,
         externalLinks: filteredLinks,
         selectedSports: coachForm.selectedSports,
+        strengths: coachForm.strengths,
+        supportTopics: coachForm.supportTopics,
+        certifications: coachForm.certifications,
+        organization: coachForm.organization,
+        youtubeUrl: coachForm.youtubeUrl,
+        xUrl: coachForm.xUrl,
+        instagramUrl: coachForm.instagramUrl,
+        consultationAvailable: toAvailabilityBoolean(coachForm.consultationAvailable),
+        paidConsultationAvailable: toAvailabilityBoolean(
+          coachForm.paidConsultationAvailable
+        ),
       };
       setProfileState(nextProfile);
       setProfileDraft(nextProfile);
@@ -1643,6 +1902,15 @@ export default function App() {
             achievements: coachForm.achievements,
             phone: coachForm.phone,
             publicEmail: coachForm.publicEmail,
+            strengths: coachForm.strengths,
+            supportTopics: coachForm.supportTopics,
+            certifications: coachForm.certifications,
+            organization: coachForm.organization,
+            youtubeUrl: coachForm.youtubeUrl,
+            xUrl: coachForm.xUrl,
+            instagramUrl: coachForm.instagramUrl,
+            consultationAvailable: nextProfile.consultationAvailable,
+            paidConsultationAvailable: nextProfile.paidConsultationAvailable,
             bio: nextProfile.bio,
             link: nextProfile.link,
             following: nextProfile.following,
@@ -1943,6 +2211,7 @@ export default function App() {
       tags: post.tags,
       replies: post.replies,
       media: post.media,
+      practiceMenu: post.practiceMenu,
       score: getTrendingScore({
         source: "feed",
         baseScore: post.likes + post.reposts * 2 + post.comments,
@@ -2068,6 +2337,28 @@ export default function App() {
         ? Math.floor(getDaysSinceTimestamp(latestPostMs))
         : 365;
       const followers = followerCountMap[account.id] ?? parseFollowerCount(account.followers);
+      const repliesReceived = authoredItems.reduce(
+        (total, item) => total + countRepliesRecursively(item.replies),
+        0
+      );
+      const repliesSent = authoredReplyItems.length;
+      const responseRate =
+        repliesReceived > 0 ? Math.min(1, repliesSent / repliesReceived) : 0;
+      const profileCompletionScore = getProfileCompletionScore({
+        bio: account.bio,
+        link: buildProfileUrl(account.handle),
+        selectedSports: account.selectedSports,
+        handle: account.handle,
+        strengths: account.strengths ?? "",
+        supportTopics: account.supportTopics ?? "",
+        certifications: account.certifications ?? "",
+        organization: account.organization ?? "",
+        youtubeUrl: account.youtubeUrl ?? "",
+        xUrl: account.xUrl ?? "",
+        instagramUrl: account.instagramUrl ?? "",
+        consultationAvailable: account.consultationAvailable ?? false,
+        paidConsultationAvailable: account.paidConsultationAvailable ?? false,
+      });
 
       return {
         ...account,
@@ -2076,6 +2367,10 @@ export default function App() {
         reposts,
         bookmarks,
         bestAnswers,
+        repliesReceived,
+        repliesSent,
+        profileCompletionScore,
+        responseRate,
         lastActivityDays,
         score: getTrendingCoachScore({
           followers,
@@ -2083,6 +2378,10 @@ export default function App() {
           reposts,
           bookmarks,
           bestAnswers,
+          repliesReceived,
+          repliesSent,
+          profileCompletionScore,
+          responseRate,
           lastActivityDays,
         }),
       };
@@ -2150,6 +2449,45 @@ export default function App() {
       }, []);
   };
 
+  /**
+   * いいね・保存した投稿をマイページ表示用の投稿カード形式に変換します。
+   * 返信へのリアクションは投稿詳細側の文脈が必要なため、ここでは通常投稿のみを一覧化します。
+   */
+  const buildInteractedPostItemsForUser = ({
+    uid,
+    records,
+    displayRole,
+  }: {
+    uid?: string;
+    records: InteractionRecord[];
+    displayRole: string;
+  }): ProfilePostItem[] => {
+    if (!uid) {
+      return [];
+    }
+
+    return records.reduce<ProfilePostItem[]>((accumulator, record) => {
+      if (record.userUid !== uid) {
+        return accumulator;
+      }
+
+      const original = allSearchContentItems.find(
+        (item) => item.id === record.postId && item.source === record.source
+      );
+      if (!original) {
+        return accumulator;
+      }
+
+      accumulator.push({
+        ...original,
+        displayRole,
+        sortTimestampMs: record.createdAtMs ?? original.createdAtMs ?? 0,
+      });
+
+      return accumulator;
+    }, []);
+  };
+
   const authoredPostCountForUser = (uid?: string, name?: string) =>
     allSearchContentItems.filter((item) =>
       uid ? item.createdByUid === uid : item.author === name
@@ -2162,7 +2500,9 @@ export default function App() {
     }
     accountDirectory.set(account.id, {
       ...account,
-      followers: String(followerCountMap[account.id] ?? 0),
+      followers: String(
+        followerCountMap[account.id] ?? parseFollowerCount(account.followers)
+      ),
     });
   });
   if (authUser) {
@@ -2175,6 +2515,15 @@ export default function App() {
       featured: false,
       role: profileState.role,
       selectedSports: profileState.selectedSports,
+      strengths: profileState.strengths,
+      supportTopics: profileState.supportTopics,
+      certifications: profileState.certifications,
+      organization: profileState.organization,
+      youtubeUrl: profileState.youtubeUrl,
+      xUrl: profileState.xUrl,
+      instagramUrl: profileState.instagramUrl,
+      consultationAvailable: profileState.consultationAvailable,
+      paidConsultationAvailable: profileState.paidConsultationAvailable,
     });
   }
 
@@ -2285,6 +2634,30 @@ export default function App() {
         ),
       ]
     : currentUserAllPosts;
+  const currentUserLikedPosts = buildInteractedPostItemsForUser({
+    uid: authUser?.uid,
+    records: likeRecords,
+    displayRole: "いいねした投稿",
+  }).sort(
+    (left, right) =>
+      (right.sortTimestampMs ?? right.createdAtMs ?? 0) -
+      (left.sortTimestampMs ?? left.createdAtMs ?? 0)
+  );
+  const currentUserBookmarkedPosts = buildInteractedPostItemsForUser({
+    uid: authUser?.uid,
+    records: bookmarkRecords,
+    displayRole: "保存した投稿",
+  }).sort(
+    (left, right) =>
+      (right.sortTimestampMs ?? right.createdAtMs ?? 0) -
+      (left.sortTimestampMs ?? left.createdAtMs ?? 0)
+  );
+  const currentUserProfileTabPosts =
+    activeProfileTab === "likes"
+      ? currentUserLikedPosts
+      : activeProfileTab === "bookmarks"
+        ? currentUserBookmarkedPosts
+        : currentUserVisiblePosts;
   const currentUserAnswers = allReplyItems.reduce<ProfileAnswerItem[]>(
     (accumulator, item) => {
       if (
@@ -2432,7 +2805,22 @@ export default function App() {
     uid?: string;
     name: string;
     role: string;
-    profile: Pick<ProfileState, "bio" | "link" | "selectedSports" | "handle">;
+    profile: Pick<
+      ProfileState,
+      | "bio"
+      | "link"
+      | "selectedSports"
+      | "handle"
+      | "strengths"
+      | "supportTopics"
+      | "certifications"
+      | "organization"
+      | "youtubeUrl"
+      | "xUrl"
+      | "instagramUrl"
+      | "consultationAvailable"
+      | "paidConsultationAvailable"
+    >;
   }): UserActivitySummary | null => {
     if (!role.includes("指導員")) {
       return null;
@@ -2572,7 +2960,7 @@ export default function App() {
         silver: 5,
         gold: 15,
       }),
-      profileCompletionScore >= 5
+      profileCompletionScore >= 10
         ? {
             id: "profile",
             label: "プロフィール完成",
@@ -2610,11 +2998,80 @@ export default function App() {
     profile: selectedUserProfile,
   });
 
+  /**
+   * 「今日の練習メニュー」検索用の条件判定です。
+   * Firestore に保存した条件タグを優先し、過去投稿でも本文から補助的に判定します。
+   */
+  const matchesTodayMenuConditions = (item: SearchContentItem) => {
+    if (todayMenuConditions.length === 0) {
+      return true;
+    }
+
+    if (item.source !== "feed" || !item.practiceMenu) {
+      return false;
+    }
+
+    const menu = item.practiceMenu;
+    const menuText = [
+      item.title,
+      item.body,
+      menu.sport,
+      menu.targetLevel,
+      menu.grade,
+      menu.participants,
+      menu.durationMinutes,
+      menu.tools,
+      menu.purpose,
+      menu.steps,
+      menu.cautions,
+      menu.commonMistakes,
+      menu.arrangements,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return todayMenuConditions.every((condition) => {
+      if (menu.conditionTags.includes(condition)) {
+        return true;
+      }
+
+      if (condition === "under60") {
+        const durations = menu.durationMinutes.match(/\d+/g) ?? [];
+        return (
+          durations.some((duration) => Number(duration) <= 60) ||
+          /60分|短時間|時短|短め/.test(menuText)
+        );
+      }
+
+      if (condition === "beginner") {
+        return /初心者|初級|入門|基礎|未経験/.test(menuText);
+      }
+
+      if (condition === "rainy") {
+        return /雨|室内|屋内|体育館|外が使えない|グラウンド不可/.test(menuText);
+      }
+
+      if (condition === "preTournament") {
+        return /大会前|試合前|調整|確認|コンディション/.test(menuText);
+      }
+
+      if (condition === "fewTools") {
+        return /道具少な|少なめ|不要|ボールのみ|コーンのみ|準備物少/.test(menuText);
+      }
+
+      return /体力差|レベル差|差が大きい|個人差|混在/.test(menuText);
+    });
+  };
+
   const searchMatchedPosts = allSearchContentItems.filter((item) => {
     if (
       activeSearchContentFilter !== "all" &&
       item.source !== activeSearchContentFilter
     ) {
+      return false;
+    }
+
+    if (item.source === "feed" && !matchesTodayMenuConditions(item)) {
       return false;
     }
 
@@ -2628,6 +3085,17 @@ export default function App() {
       item.title,
       item.body,
       item.sourceLabel,
+      item.practiceMenu?.sport,
+      item.practiceMenu?.targetLevel,
+      item.practiceMenu?.grade,
+      item.practiceMenu?.participants,
+      item.practiceMenu?.durationMinutes,
+      item.practiceMenu?.tools,
+      item.practiceMenu?.purpose,
+      item.practiceMenu?.steps,
+      item.practiceMenu?.cautions,
+      item.practiceMenu?.commonMistakes,
+      item.practiceMenu?.arrangements,
       ...item.tags,
       ...item.sports,
     ]
@@ -2648,7 +3116,9 @@ export default function App() {
   const searchAccounts = [
     ...directoryAccounts.map((account) => ({
       ...account,
-      followers: String(followerCountMap[account.id] ?? 0),
+      followers: String(
+        followerCountMap[account.id] ?? parseFollowerCount(account.followers)
+      ),
     })),
   ]
     .filter((account) => !currentBlockedUserIds.includes(account.id))
@@ -2667,7 +3137,18 @@ export default function App() {
         return true;
       }
 
-      return [account.name, account.handle, account.bio]
+      return [
+        account.name,
+        account.handle,
+        account.bio,
+        account.strengths,
+        account.supportTopics,
+        account.certifications,
+        account.organization,
+        account.youtubeUrl,
+        account.xUrl,
+        account.instagramUrl,
+      ]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearchQuery);
@@ -3045,6 +3526,15 @@ export default function App() {
           followers: nextProfile.followers,
           posts: nextProfile.posts,
           selectedSports: nextProfile.selectedSports,
+          strengths: nextProfile.strengths,
+          supportTopics: nextProfile.supportTopics,
+          certifications: nextProfile.certifications,
+          organization: nextProfile.organization,
+          youtubeUrl: nextProfile.youtubeUrl,
+          xUrl: nextProfile.xUrl,
+          instagramUrl: nextProfile.instagramUrl,
+          consultationAvailable: nextProfile.consultationAvailable,
+          paidConsultationAvailable: nextProfile.paidConsultationAvailable,
           externalLinks: filteredLinks,
         },
         updatedAt: serverTimestamp(),
@@ -3098,6 +3588,7 @@ export default function App() {
       if (profileState.coverUrl) {
         await deleteStorageFileByUrl(profileState.coverUrl);
       }
+      await deleteOwnedPostsAndMedia(authUser.uid);
       await deleteDoc(doc(db, "users", authUser.uid));
       await deleteUser(authUser);
       setProfileState(defaultProfileState);
@@ -3132,7 +3623,46 @@ export default function App() {
       selectedSports: current.selectedSports.includes(sport)
         ? current.selectedSports.filter((item) => item !== sport)
         : [...current.selectedSports, sport],
+      practiceMenu: {
+        ...current.practiceMenu,
+        sport:
+          current.practiceMenu.sport ||
+          (!current.selectedSports.includes(sport) ? sport : current.practiceMenu.sport),
+      },
     }));
+  };
+
+  const updatePracticeMenuField = (
+    key: Exclude<keyof PracticeMenuTemplate, "conditionTags">,
+    value: string
+  ) => {
+    setComposeState((current) => ({
+      ...current,
+      practiceMenu: {
+        ...current.practiceMenu,
+        [key]: value,
+      },
+    }));
+  };
+
+  const togglePracticeMenuCondition = (key: TodayMenuConditionKey) => {
+    setComposeState((current) => ({
+      ...current,
+      practiceMenu: {
+        ...current.practiceMenu,
+        conditionTags: current.practiceMenu.conditionTags.includes(key)
+          ? current.practiceMenu.conditionTags.filter((item) => item !== key)
+          : [...current.practiceMenu.conditionTags, key],
+      },
+    }));
+  };
+
+  const toggleTodayMenuCondition = (key: TodayMenuConditionKey) => {
+    setTodayMenuConditions((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key]
+    );
   };
 
   const addProfileLink = () => {
@@ -3180,6 +3710,15 @@ export default function App() {
     handle,
     selectedSports,
     followers,
+    strengths,
+    supportTopics,
+    certifications,
+    organization,
+    youtubeUrl,
+    xUrl,
+    instagramUrl,
+    consultationAvailable,
+    paidConsultationAvailable,
     historyMode = "push",
   }: {
     uid?: string;
@@ -3189,8 +3728,20 @@ export default function App() {
     handle?: string;
     selectedSports?: string[];
     followers?: string;
+    strengths?: string;
+    supportTopics?: string;
+    certifications?: string;
+    organization?: string;
+    youtubeUrl?: string;
+    xUrl?: string;
+    instagramUrl?: string;
+    consultationAvailable?: boolean;
+    paidConsultationAvailable?: boolean;
     historyMode?: "push" | "replace";
   }) => {
+    const directoryAccount = uid
+      ? directoryAccounts.find((account) => account.id === uid)
+      : undefined;
     const authoredPosts = allSearchContentItems.filter((item) =>
       uid
         ? item.createdByUid === uid || (!item.createdByUid && item.author === name)
@@ -3221,6 +3772,17 @@ export default function App() {
           : followers ?? "0",
       posts: String(authoredPosts.length),
       selectedSports: primarySports.length > 0 ? primarySports : ["その他"],
+      strengths: strengths ?? directoryAccount?.strengths ?? "",
+      supportTopics: supportTopics ?? directoryAccount?.supportTopics ?? "",
+      certifications: certifications ?? directoryAccount?.certifications ?? "",
+      organization: organization ?? directoryAccount?.organization ?? "",
+      youtubeUrl: youtubeUrl ?? directoryAccount?.youtubeUrl ?? "",
+      xUrl: xUrl ?? directoryAccount?.xUrl ?? "",
+      instagramUrl: instagramUrl ?? directoryAccount?.instagramUrl ?? "",
+      consultationAvailable:
+        consultationAvailable ?? directoryAccount?.consultationAvailable ?? false,
+      paidConsultationAvailable:
+        paidConsultationAvailable ?? directoryAccount?.paidConsultationAvailable ?? false,
       avatarLabel: name.slice(0, 1),
       coverTone: createCoverToneFromName(name),
     });
@@ -3932,6 +4494,27 @@ export default function App() {
       return;
     }
 
+    if (profileState.role.includes("指導員") && composeState.target === "feed") {
+      const menu = composeState.practiceMenu;
+      const requiredPracticeFields = [
+        menu.sport,
+        menu.targetLevel,
+        menu.grade,
+        menu.participants,
+        menu.durationMinutes,
+        menu.tools,
+        menu.purpose,
+        menu.steps,
+        menu.cautions,
+        menu.commonMistakes,
+        menu.arrangements,
+      ];
+      if (requiredPracticeFields.some((value) => !value.trim())) {
+        setAuthError("練習メニュー投稿テンプレの項目をすべて入力してください。");
+        return;
+      }
+    }
+
     if (!db || !storage) {
       setAuthError(
         "投稿設定が未完了です。管理者に設定状況を確認してください。"
@@ -3959,6 +4542,7 @@ export default function App() {
           comments: 0,
           replies: [],
           media: uploadedMedia,
+          practiceMenu: serializePracticeMenuForFirestore(composeState.practiceMenu),
           createdByUid: authUser.uid,
           visibility: "public",
           createdAt: serverTimestamp(),
@@ -4085,6 +4669,7 @@ export default function App() {
             <ScrollView
               style={styles.timelineContentScroller}
               contentContainerStyle={styles.timelinePageContent}
+              nestedScrollEnabled={true}
               showsVerticalScrollIndicator={false}
             >
               {activeTimelineSection === "all" && homeContentItems.length === 0 ? (
@@ -4583,6 +5168,7 @@ export default function App() {
                         onOpenUrl={requestOpenExternalUrl}
                       />
                     ) : null}
+                    {renderPracticeMenu(post.practiceMenu)}
                     <MediaGallery media={post.media} />
                     {renderHashtagChips(feedDisplay.tags)}
                   </Pressable>
@@ -4889,6 +5475,7 @@ export default function App() {
                         onOpenUrl={requestOpenExternalUrl}
                       />
                     ) : null}
+                    {renderPracticeMenu(postDetail.practiceMenu, "detail")}
                     <MediaGallery media={postDetail.media} />
 
                     {renderHashtagChips(postDetailDisplay.tags)}
@@ -5992,6 +6579,204 @@ export default function App() {
                     </View>
                   </View>
                 ) : null}
+                {profileState.role.includes("指導員") && composeState.target === "feed" ? (
+                  <View style={styles.practiceTemplateCard}>
+                    <View style={styles.formLabelRow}>
+                      <Text style={styles.formLabel}>練習メニュー投稿テンプレ</Text>
+                      <Text style={styles.formDetail}>必須</Text>
+                    </View>
+                    <Text style={styles.fieldSupport}>
+                      顧問の先生がそのまま部活で使えるよう、条件と実施手順を型として残します。
+                    </Text>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>種目</Text>
+                      <View style={styles.sportChipRow}>
+                        {profileState.selectedSports.map((sport) => {
+                          const selected = composeState.practiceMenu.sport === sport;
+                          return (
+                            <Pressable
+                              key={sport}
+                              style={[
+                                styles.postTargetChip,
+                                selected && styles.postTargetChipActive,
+                              ]}
+                              onPress={() => updatePracticeMenuField("sport", sport)}
+                            >
+                              <Text
+                                style={[
+                                  styles.postTargetChipText,
+                                  selected && styles.postTargetChipTextActive,
+                                ]}
+                              >
+                                {sport}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>対象レベル</Text>
+                      <View style={styles.sportChipRow}>
+                        {practiceLevelOptions.map((level) => {
+                          const selected = composeState.practiceMenu.targetLevel === level;
+                          return (
+                            <Pressable
+                              key={level}
+                              style={[
+                                styles.postTargetChip,
+                                selected && styles.postTargetChipActive,
+                              ]}
+                              onPress={() => updatePracticeMenuField("targetLevel", level)}
+                            >
+                              <Text
+                                style={[
+                                  styles.postTargetChipText,
+                                  selected && styles.postTargetChipTextActive,
+                                ]}
+                              >
+                                {level}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>学年</Text>
+                      <View style={styles.sportChipRow}>
+                        {schoolGradeOptions.map((grade) => {
+                          const selected = composeState.practiceMenu.grade === grade;
+                          return (
+                            <Pressable
+                              key={grade}
+                              style={[
+                                styles.postTargetChip,
+                                selected && styles.postTargetChipActive,
+                              ]}
+                              onPress={() => updatePracticeMenuField("grade", grade)}
+                            >
+                              <Text
+                                style={[
+                                  styles.postTargetChipText,
+                                  selected && styles.postTargetChipTextActive,
+                                ]}
+                              >
+                                {grade}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    <View style={styles.inlineFieldGrid}>
+                      <FormField
+                        label="人数"
+                        detail="必須"
+                        placeholder="例: 12〜20人"
+                        multiline={false}
+                        value={composeState.practiceMenu.participants}
+                        onChangeText={(value) =>
+                          updatePracticeMenuField("participants", value)
+                        }
+                      />
+                      <FormField
+                        label="練習時間"
+                        detail="必須"
+                        placeholder="例: 60分"
+                        multiline={false}
+                        value={composeState.practiceMenu.durationMinutes}
+                        onChangeText={(value) =>
+                          updatePracticeMenuField("durationMinutes", value)
+                        }
+                      />
+                    </View>
+                    <FormField
+                      label="必要な道具"
+                      detail="必須"
+                      placeholder="例: ボール10個、コーン8個、ビブス"
+                      multiline={false}
+                      value={composeState.practiceMenu.tools}
+                      onChangeText={(value) => updatePracticeMenuField("tools", value)}
+                    />
+                    <FormField
+                      label="練習の目的"
+                      detail="必須"
+                      placeholder="例: 判断速度を上げる / 基礎フォームを安定させる"
+                      multiline={true}
+                      value={composeState.practiceMenu.purpose}
+                      onChangeText={(value) => updatePracticeMenuField("purpose", value)}
+                    />
+                    <FormField
+                      label="手順"
+                      detail="必須"
+                      placeholder="例: 1. 2人組を作る 2. 30秒ごとに交代する"
+                      multiline={true}
+                      value={composeState.practiceMenu.steps}
+                      onChangeText={(value) => updatePracticeMenuField("steps", value)}
+                    />
+                    <FormField
+                      label="注意点"
+                      detail="必須"
+                      placeholder="例: フォームが崩れたら一度止めて確認する"
+                      multiline={true}
+                      value={composeState.practiceMenu.cautions}
+                      onChangeText={(value) => updatePracticeMenuField("cautions", value)}
+                    />
+                    <FormField
+                      label="よくある失敗"
+                      detail="必須"
+                      placeholder="例: スピードを優先しすぎて確認が雑になる"
+                      multiline={true}
+                      value={composeState.practiceMenu.commonMistakes}
+                      onChangeText={(value) =>
+                        updatePracticeMenuField("commonMistakes", value)
+                      }
+                    />
+                    <FormField
+                      label="アレンジ方法"
+                      detail="必須"
+                      placeholder="例: 人数が少ない時はエリアを狭くする"
+                      multiline={true}
+                      value={composeState.practiceMenu.arrangements}
+                      onChangeText={(value) =>
+                        updatePracticeMenuField("arrangements", value)
+                      }
+                    />
+                    <View style={styles.formGroup}>
+                      <View style={styles.formLabelRow}>
+                        <Text style={styles.formLabel}>今日の練習検索に使う条件</Text>
+                        <Text style={styles.formDetail}>任意 / 複数選択</Text>
+                      </View>
+                      <View style={styles.sportChipRow}>
+                        {todayMenuConditionOptions.map((condition) => {
+                          const selected = composeState.practiceMenu.conditionTags.includes(
+                            condition.key
+                          );
+                          return (
+                            <Pressable
+                              key={condition.key}
+                              style={[
+                                styles.postTargetChip,
+                                selected && styles.postTargetChipActive,
+                              ]}
+                              onPress={() => togglePracticeMenuCondition(condition.key)}
+                            >
+                              <Text
+                                style={[
+                                  styles.postTargetChipText,
+                                  selected && styles.postTargetChipTextActive,
+                                ]}
+                              >
+                                {condition.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  </View>
+                ) : null}
                 <View style={styles.formGroup}>
                   <View style={styles.formLabelRow}>
                     <Text style={styles.formLabel}>本文</Text>
@@ -6123,6 +6908,39 @@ export default function App() {
             </View>
           ) : null}
 
+          {activeSearchTab !== "accounts" ? (
+            <View style={styles.todayMenuSearchCard}>
+              <Text style={styles.todayMenuSearchTitle}>今日の練習メニュー検索</Text>
+              <Text style={styles.todayMenuSearchText}>
+                60分以内、雨の日、初心者多めなど、部活の状況に合わせて型付きメニュー投稿を絞り込めます。
+              </Text>
+              <View style={styles.sportChipRow}>
+                {todayMenuConditionOptions.map((condition) => {
+                  const selected = todayMenuConditions.includes(condition.key);
+                  return (
+                    <Pressable
+                      key={condition.key}
+                      style={[
+                        styles.searchFilterChip,
+                        selected && styles.searchFilterChipActive,
+                      ]}
+                      onPress={() => toggleTodayMenuCondition(condition.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.searchFilterChipText,
+                          selected && styles.searchFilterChipTextActive,
+                        ]}
+                      >
+                        {condition.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+
           {activeSearchTab === "trending-posts" ? (
             <View style={styles.searchResultStack}>
               {trendingSearchPosts.length === 0 ? (
@@ -6185,6 +7003,7 @@ export default function App() {
                               title: post.title,
                               body: post.body,
                               media: post.media,
+                              practiceMenu: post.practiceMenu,
                               replies: post.replies,
                               sports: post.sports,
                               tags: post.tags,
@@ -6209,6 +7028,7 @@ export default function App() {
                             onOpenUrl={requestOpenExternalUrl}
                           />
                         ) : null}
+                        {renderPracticeMenu(post.practiceMenu)}
                         <MediaGallery media={post.media} compact={true} />
                         {renderHashtagChips(postDisplay.tags)}
                         <View style={styles.sportChipRow}>
@@ -6292,6 +7112,7 @@ export default function App() {
                               title: post.title,
                               body: post.body,
                               media: post.media,
+                              practiceMenu: post.practiceMenu,
                               replies: post.replies,
                               sports: post.sports,
                               tags: post.tags,
@@ -6309,6 +7130,7 @@ export default function App() {
                         {postDisplay.bodyText ? (
                           <RichTextRenderer content={postDisplay.bodyText} compact={true} onOpenUrl={requestOpenExternalUrl} />
                         ) : null}
+                        {renderPracticeMenu(post.practiceMenu)}
                         <MediaGallery media={post.media} compact={true} />
                         {renderHashtagChips(postDisplay.tags)}
                         <ReplyList replies={post.replies} compact={true} />
@@ -6346,6 +7168,15 @@ export default function App() {
                         handle: account.handle,
                         followers: account.followers,
                         selectedSports: account.selectedSports,
+                        strengths: account.strengths,
+                        supportTopics: account.supportTopics,
+                        certifications: account.certifications,
+                        organization: account.organization,
+                        youtubeUrl: account.youtubeUrl,
+                        xUrl: account.xUrl,
+                        instagramUrl: account.instagramUrl,
+                        consultationAvailable: account.consultationAvailable,
+                        paidConsultationAvailable: account.paidConsultationAvailable,
                       })
                     }
                   >
@@ -6364,6 +7195,15 @@ export default function App() {
                             handle: account.handle,
                             followers: account.followers,
                             selectedSports: account.selectedSports,
+                            strengths: account.strengths,
+                            supportTopics: account.supportTopics,
+                            certifications: account.certifications,
+                            organization: account.organization,
+                            youtubeUrl: account.youtubeUrl,
+                            xUrl: account.xUrl,
+                            instagramUrl: account.instagramUrl,
+                            consultationAvailable: account.consultationAvailable,
+                            paidConsultationAvailable: account.paidConsultationAvailable,
                           })
                         }
                       >
@@ -6485,6 +7325,7 @@ export default function App() {
                     ))}
                   </View>
                 ) : null}
+                {renderCoachProfileDetails(profileState)}
                 <Text style={styles.profileJoined}>{profileState.joined}</Text>
                 <View style={styles.sportChipRow}>
                   {profileState.selectedSports.map((sport) => (
@@ -6578,15 +7419,16 @@ export default function App() {
             </View>
 
             <View style={styles.stack}>
-              {activeProfileTab === "posts"
-                ? currentUserVisiblePosts.map((post) => (
+              {["posts", "likes", "bookmarks"].includes(activeProfileTab)
+                ? currentUserProfileTabPosts.map((post) => (
                     <View key={post.id} style={styles.profilePostCard}>
-                      {pinnedPostKey === `${post.source}:${post.id}` ? (
+                      {activeProfileTab === "posts" &&
+                      pinnedPostKey === `${post.source}:${post.id}` ? (
                         <View style={styles.pinnedNoticeRow}>
                           <Text style={styles.pinnedNoticeText}>固定中</Text>
                         </View>
                       ) : null}
-                      {post.displayRole ? (
+                      {activeProfileTab === "posts" && post.displayRole ? (
                         <View style={styles.repostNoticeRow}>
                           <Text style={styles.repostNoticeIcon}>↻</Text>
                           <Text style={styles.repostNoticeText}>
@@ -6599,9 +7441,10 @@ export default function App() {
                           <DefaultAvatarIcon size={24} />
                         </View>
                         <View style={styles.profilePostHeaderText}>
-                          <Text style={styles.profilePostName}>{profileState.name}</Text>
+                          <Text style={styles.profilePostName}>{post.author}</Text>
                           <Text style={styles.profilePostMeta}>
-                            {profileState.handle} ・ {post.displayRole ?? post.role}
+                            {post.authorHandle ?? createHandleFromName(post.author)} ・{" "}
+                            {post.displayRole ?? post.role}
                           </Text>
                         </View>
                         <View style={styles.profileSourceBadge}>
@@ -6625,6 +7468,7 @@ export default function App() {
                               title: post.title,
                               body: post.body,
                               media: post.media,
+                              practiceMenu: post.practiceMenu,
                               replies: post.replies,
                               sports: post.sports,
                               tags: post.tags,
@@ -6650,20 +7494,25 @@ export default function App() {
                             onOpenUrl={requestOpenExternalUrl}
                           />
                         ) : null}
+                        {renderPracticeMenu(post.practiceMenu)}
                         <MediaGallery media={post.media} compact={true} />
                         {renderHashtagChips(postDisplay.tags)}
                             </>
                           );
                         })()}
                       </Pressable>
-                      <Pressable
-                        style={styles.inlineActionButton}
-                        onPress={() => void togglePinnedPost(post)}
-                      >
-                        <Text style={styles.inlineActionButtonText}>
-                          {pinnedPostKey === `${post.source}:${post.id}` ? "固定を解除" : "この投稿を固定"}
-                        </Text>
-                      </Pressable>
+                      {activeProfileTab === "posts" ? (
+                        <Pressable
+                          style={styles.inlineActionButton}
+                          onPress={() => void togglePinnedPost(post)}
+                        >
+                          <Text style={styles.inlineActionButtonText}>
+                            {pinnedPostKey === `${post.source}:${post.id}`
+                              ? "固定を解除"
+                              : "この投稿を固定"}
+                          </Text>
+                        </Pressable>
+                      ) : null}
                       <View style={styles.profilePostMetrics}>
                         <Text style={styles.profileMetricText}>
                           返信 {post.replies.length}
@@ -6737,6 +7586,16 @@ export default function App() {
               {activeProfileTab === "best_answers" && currentUserBestAnswers.length === 0 ? (
                 <View style={styles.communityCard}>
                   <Text style={styles.cardTitle}>ベストアンサーはありません</Text>
+                </View>
+              ) : null}
+              {activeProfileTab === "likes" && currentUserLikedPosts.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>いいねした投稿はありません</Text>
+                </View>
+              ) : null}
+              {activeProfileTab === "bookmarks" && currentUserBookmarkedPosts.length === 0 ? (
+                <View style={styles.communityCard}>
+                  <Text style={styles.cardTitle}>保存した投稿はありません</Text>
                 </View>
               ) : null}
             </View>
@@ -7017,6 +7876,7 @@ export default function App() {
                     ))}
                   </View>
                 ) : null}
+                {renderCoachProfileDetails(selectedUserProfile)}
                 <Text style={styles.profileJoined}>{selectedUserProfile.joined}</Text>
                 <View style={styles.sportChipRow}>
                   {selectedUserProfile.selectedSports.map((sport) => (
@@ -7101,7 +7961,9 @@ export default function App() {
             </View>
 
             <View style={styles.profileTabBar}>
-              {myPageTabs.map((tab) => (
+              {myPageTabs
+                .filter((tab) => tab.key !== "likes" && tab.key !== "bookmarks")
+                .map((tab) => (
                 <Pressable
                   key={tab.key}
                   onPress={() => setActiveProfileTab(tab.key as ProfileTabKey)}
@@ -7172,6 +8034,7 @@ export default function App() {
                               title: post.title,
                               body: post.body,
                               media: post.media,
+                              practiceMenu: post.practiceMenu,
                               replies: post.replies,
                               sports: post.sports,
                               tags: post.tags,
@@ -7197,6 +8060,7 @@ export default function App() {
                             onOpenUrl={requestOpenExternalUrl}
                           />
                         ) : null}
+                        {renderPracticeMenu(post.practiceMenu)}
                         <MediaGallery media={post.media} compact={true} />
                         {renderHashtagChips(postDisplay.tags)}
                             </>
@@ -7347,6 +8211,155 @@ export default function App() {
               onChangeText={(value) => updateProfileDraft("bio", value)}
             />
             {profileDraft.role.includes("指導員") ? (
+              <>
+              <View style={styles.practiceTemplateCard}>
+                <Text style={styles.formLabel}>指導者プロフィール強化</Text>
+                <Text style={styles.fieldSupport}>
+                  得意分野や相談可否を整えると、顧問の先生が「何を相談できる人か」を判断しやすくなります。
+                </Text>
+                <FormField
+                  label="得意分野"
+                  detail="任意"
+                  placeholder="例: 初心者指導、守備戦術、怪我予防"
+                  multiline={true}
+                  value={profileDraft.strengths}
+                  onChangeText={(value) => updateProfileDraft("strengths", value)}
+                />
+                <FormField
+                  label="対応できる悩み"
+                  detail="任意"
+                  placeholder="例: 練習時間が短い、部員の体力差が大きい"
+                  multiline={true}
+                  value={profileDraft.supportTopics}
+                  onChangeText={(value) => updateProfileDraft("supportTopics", value)}
+                />
+                <FormField
+                  label="資格"
+                  detail="任意"
+                  placeholder="例: 公認指導者資格、トレーナー資格"
+                  multiline={false}
+                  value={profileDraft.certifications}
+                  onChangeText={(value) => updateProfileDraft("certifications", value)}
+                />
+                <FormField
+                  label="所属スクール"
+                  detail="任意"
+                  placeholder="例: Komonityスポーツスクール"
+                  multiline={false}
+                  value={profileDraft.organization}
+                  onChangeText={(value) => updateProfileDraft("organization", value)}
+                />
+                <FormField
+                  label="YouTube"
+                  detail="任意"
+                  placeholder="例: https://youtube.com/@komonity"
+                  multiline={false}
+                  value={profileDraft.youtubeUrl}
+                  onChangeText={(value) => updateProfileDraft("youtubeUrl", value)}
+                />
+                <FormField
+                  label="X / Instagram"
+                  detail="任意"
+                  placeholder="X URL"
+                  multiline={false}
+                  value={profileDraft.xUrl}
+                  onChangeText={(value) => updateProfileDraft("xUrl", value)}
+                />
+                <FormField
+                  label="Instagram"
+                  detail="任意"
+                  placeholder="Instagram URL"
+                  multiline={false}
+                  value={profileDraft.instagramUrl}
+                  onChangeText={(value) => updateProfileDraft("instagramUrl", value)}
+                />
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>相談受付</Text>
+                  <View style={styles.sportChipRow}>
+                    <Pressable
+                      style={[
+                        styles.postTargetChip,
+                        profileDraft.consultationAvailable &&
+                          styles.postTargetChipActive,
+                      ]}
+                      onPress={() => updateProfileAvailability("consultationAvailable", true)}
+                    >
+                      <Text
+                        style={[
+                          styles.postTargetChipText,
+                          profileDraft.consultationAvailable &&
+                            styles.postTargetChipTextActive,
+                        ]}
+                      >
+                        受付可
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.postTargetChip,
+                        !profileDraft.consultationAvailable &&
+                          styles.postTargetChipActive,
+                      ]}
+                      onPress={() => updateProfileAvailability("consultationAvailable", false)}
+                    >
+                      <Text
+                        style={[
+                          styles.postTargetChipText,
+                          !profileDraft.consultationAvailable &&
+                            styles.postTargetChipTextActive,
+                        ]}
+                      >
+                        受付不可
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>有料相談</Text>
+                  <View style={styles.sportChipRow}>
+                    <Pressable
+                      style={[
+                        styles.postTargetChip,
+                        profileDraft.paidConsultationAvailable &&
+                          styles.postTargetChipActive,
+                      ]}
+                      onPress={() =>
+                        updateProfileAvailability("paidConsultationAvailable", true)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.postTargetChipText,
+                          profileDraft.paidConsultationAvailable &&
+                            styles.postTargetChipTextActive,
+                        ]}
+                      >
+                        対応可
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.postTargetChip,
+                        !profileDraft.paidConsultationAvailable &&
+                          styles.postTargetChipActive,
+                      ]}
+                      onPress={() =>
+                        updateProfileAvailability("paidConsultationAvailable", false)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.postTargetChipText,
+                          !profileDraft.paidConsultationAvailable &&
+                            styles.postTargetChipTextActive,
+                        ]}
+                      >
+                        対応不可
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
               <View style={styles.formGroup}>
                 <View style={styles.formLabelRow}>
                   <Text style={styles.formLabel}>外部サイト情報</Text>
@@ -7381,6 +8394,7 @@ export default function App() {
                   </Pressable>
                 </View>
               </View>
+              </>
             ) : null}
             <SportSelector
               title="表示したい種目"
@@ -7544,7 +8558,11 @@ export default function App() {
                 label={field.label}
                 detail={field.detail}
                 placeholder={field.placeholder}
-                multiline={field.label === "今までの経歴や功績"}
+                multiline={[
+                  "今までの経歴や功績",
+                  "得意分野",
+                  "対応できる悩み",
+                ].includes(field.label)}
                 value={getCoachFieldValue(field.label, coachForm)}
                 onChangeText={(value) =>
                   updateCoachForm(getCoachFieldKey(field.label), value)
@@ -7818,7 +8836,16 @@ export default function App() {
             onPress={() => setIsMenuOpen(false)}
           />
           <ScrollView style={styles.sideMenu} contentContainerStyle={styles.sideMenuContent}>
-            <Text style={styles.sideMenuTitle}>メニュー</Text>
+            <View style={styles.sideMenuHeader}>
+              <Text style={styles.sideMenuTitle}>メニュー</Text>
+              <Pressable
+                accessibilityLabel="サイドメニューを閉じる"
+                style={styles.sideMenuCloseButton}
+                onPress={() => setIsMenuOpen(false)}
+              >
+                <Text style={styles.sideMenuCloseButtonText}>×</Text>
+              </Pressable>
+            </View>
             <Pressable style={styles.sideMenuItem} onPress={() => goToScreen("top")}>
               <Text style={styles.sideMenuItemText}>タイムライン</Text>
             </Pressable>
@@ -8124,11 +9151,32 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 10,
   },
+  sideMenuHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
   sideMenuTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: "800",
-    marginBottom: 6,
+  },
+  sideMenuCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideMenuCloseButtonText: {
+    color: colors.text,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: "700",
   },
   sideMenuItem: {
     backgroundColor: "#fbfaf7",
@@ -8249,11 +9297,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContentShell: {
+    flex: 1,
+    minHeight: 0,
     width: "100%",
     marginTop: 0,
     paddingTop: 0,
   },
   timelineContentScroller: {
+    flex: 1,
+    minHeight: 0,
     width: "100%",
     marginTop: 0,
   },
@@ -8319,6 +9371,51 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  practiceTemplateCard: {
+    backgroundColor: "#fcf7ee",
+    borderRadius: 22,
+    padding: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  inlineFieldGrid: {
+    gap: 12,
+  },
+  practiceMenuBox: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 14,
+    gap: 10,
+    marginTop: 10,
+  },
+  practiceMenuHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  practiceMenuTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  practiceMenuRow: {
+    gap: 4,
+  },
+  practiceMenuLabel: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  practiceMenuValue: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "600",
   },
   flowTitle: {
     color: colors.text,
@@ -8550,6 +9647,28 @@ const styles = StyleSheet.create({
   },
   searchFilterChipTextActive: {
     color: "#ffffff",
+  },
+  todayMenuSearchCard: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    padding: 16,
+    gap: 10,
+  },
+  todayMenuSearchTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  todayMenuSearchText: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   searchResultStack: {
     gap: 0,
@@ -9483,6 +10602,34 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 24,
+  },
+  coachProfileDetailBox: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceStrong,
+    padding: 14,
+    gap: 10,
+    marginTop: 4,
+  },
+  coachProfileDetailTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  coachProfileDetailRow: {
+    gap: 4,
+  },
+  coachProfileDetailLabel: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  coachProfileDetailValue: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: "600",
   },
   profileJoined: {
     color: colors.muted,

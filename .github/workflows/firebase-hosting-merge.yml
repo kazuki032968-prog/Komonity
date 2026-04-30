@@ -24,7 +24,7 @@ jobs:
           echo "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}" >> .env
           echo "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}" >> .env
           echo "EXPO_PUBLIC_FIREBASE_APP_ID=${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}" >> .env
-      - run: npx expo export --platform web
+      - run: npm run build:web
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

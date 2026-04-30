@@ -222,6 +222,11 @@ export const getTrendingCoachScore = ({
   reposts,
   bookmarks,
   bestAnswers,
+  repliesReceived = 0,
+  repliesSent = 0,
+  profileCompletionScore = 0,
+  responseRate = 0,
+  advisorRating = 0,
   lastActivityDays,
 }: {
   followers: number;
@@ -229,13 +234,23 @@ export const getTrendingCoachScore = ({
   reposts: number;
   bookmarks: number;
   bestAnswers: number;
+  repliesReceived?: number;
+  repliesSent?: number;
+  profileCompletionScore?: number;
+  responseRate?: number;
+  advisorRating?: number;
   lastActivityDays: number;
 }) =>
   followers * 1 +
   likes * 2 +
   reposts * 3 +
   bookmarks * 3 +
-  bestAnswers * 8 -
+  bestAnswers * 10 +
+  repliesReceived * 1 +
+  repliesSent * 1 +
+  profileCompletionScore * 8 +
+  responseRate * 20 +
+  advisorRating * 12 -
   lastActivityDays * 5;
 
 export const countRepliesRecursively = (replies: Array<{ replies?: unknown[] }>): number =>
@@ -285,7 +300,22 @@ export const getPostingStreakDays = (timestamps: number[]) => {
 };
 
 export const getProfileCompletionScore = (
-  profile: Pick<ProfileState, "bio" | "link" | "selectedSports" | "handle">
+  profile: Pick<
+    ProfileState,
+    | "bio"
+    | "link"
+    | "selectedSports"
+    | "handle"
+    | "strengths"
+    | "supportTopics"
+    | "certifications"
+    | "organization"
+    | "youtubeUrl"
+    | "xUrl"
+    | "instagramUrl"
+    | "consultationAvailable"
+    | "paidConsultationAvailable"
+  >
 ) => {
   let score = 0;
 
@@ -302,6 +332,21 @@ export const getProfileCompletionScore = (
     score += 1;
   }
   if (profile.selectedSports.length >= 2 || profile.bio.trim().length >= 80) {
+    score += 1;
+  }
+  if (profile.strengths.trim()) {
+    score += 1;
+  }
+  if (profile.supportTopics.trim()) {
+    score += 1;
+  }
+  if (profile.certifications.trim() || profile.organization.trim()) {
+    score += 1;
+  }
+  if (profile.youtubeUrl.trim() || profile.xUrl.trim() || profile.instagramUrl.trim()) {
+    score += 1;
+  }
+  if (profile.consultationAvailable || profile.paidConsultationAvailable) {
     score += 1;
   }
 
@@ -662,6 +707,24 @@ export const getCoachFieldKey = (label: string): keyof CoachFormState => {
       return "experience";
     case "今までの経歴や功績":
       return "achievements";
+    case "得意分野":
+      return "strengths";
+    case "対応できる悩み":
+      return "supportTopics";
+    case "資格":
+      return "certifications";
+    case "所属スクール":
+      return "organization";
+    case "YouTube":
+      return "youtubeUrl";
+    case "X / Twitter":
+      return "xUrl";
+    case "Instagram":
+      return "instagramUrl";
+    case "相談受付可否":
+      return "consultationAvailable";
+    case "有料相談可否":
+      return "paidConsultationAvailable";
     case "電話番号":
       return "phone";
     case "メールアドレス":

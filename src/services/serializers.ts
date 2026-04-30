@@ -1,4 +1,10 @@
-import type { MediaAttachment, Reply } from "../types/app";
+import { initialPracticeMenu, todayMenuConditionOptions } from "../constants/app";
+import type {
+  MediaAttachment,
+  PracticeMenuTemplate,
+  Reply,
+  TodayMenuConditionKey,
+} from "../types/app";
 
 /**
  * Firestore の生データから返信ツリーを安全な Reply 配列へ変換します。
@@ -74,6 +80,77 @@ export const normalizeMedia = (value: unknown): MediaAttachment[] => {
   });
 
   return normalized;
+};
+
+const isTodayMenuConditionKey = (value: unknown): value is TodayMenuConditionKey =>
+  typeof value === "string" &&
+  todayMenuConditionOptions.some((option) => option.key === value);
+
+/**
+ * Firestore の練習メニューテンプレートを安全に復元します。
+ */
+export const normalizePracticeMenu = (
+  value: unknown
+): PracticeMenuTemplate | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  const menu = value as Partial<Record<keyof PracticeMenuTemplate, unknown>>;
+  const normalized: PracticeMenuTemplate = {
+    ...initialPracticeMenu,
+    sport: typeof menu.sport === "string" ? menu.sport : "",
+    targetLevel:
+      typeof menu.targetLevel === "string" ? menu.targetLevel : "",
+    grade: typeof menu.grade === "string" ? menu.grade : "",
+    participants:
+      typeof menu.participants === "string" ? menu.participants : "",
+    durationMinutes:
+      typeof menu.durationMinutes === "string" ? menu.durationMinutes : "",
+    tools: typeof menu.tools === "string" ? menu.tools : "",
+    purpose: typeof menu.purpose === "string" ? menu.purpose : "",
+    steps: typeof menu.steps === "string" ? menu.steps : "",
+    cautions: typeof menu.cautions === "string" ? menu.cautions : "",
+    commonMistakes:
+      typeof menu.commonMistakes === "string" ? menu.commonMistakes : "",
+    arrangements:
+      typeof menu.arrangements === "string" ? menu.arrangements : "",
+    conditionTags: Array.isArray(menu.conditionTags)
+      ? menu.conditionTags.filter(isTodayMenuConditionKey)
+      : [],
+  };
+
+  return Object.values(normalized).some((item) =>
+    Array.isArray(item) ? item.length > 0 : Boolean(String(item).trim())
+  )
+    ? normalized
+    : undefined;
+};
+
+/**
+ * 練習メニューテンプレートを Firestore 保存用のプレーンオブジェクトへ変換します。
+ */
+export const serializePracticeMenuForFirestore = (
+  menu?: PracticeMenuTemplate
+) => {
+  if (!menu) {
+    return null;
+  }
+
+  return {
+    sport: menu.sport.trim(),
+    targetLevel: menu.targetLevel.trim(),
+    grade: menu.grade.trim(),
+    participants: menu.participants.trim(),
+    durationMinutes: menu.durationMinutes.trim(),
+    tools: menu.tools.trim(),
+    purpose: menu.purpose.trim(),
+    steps: menu.steps.trim(),
+    cautions: menu.cautions.trim(),
+    commonMistakes: menu.commonMistakes.trim(),
+    arrangements: menu.arrangements.trim(),
+    conditionTags: menu.conditionTags,
+  };
 };
 
 /**

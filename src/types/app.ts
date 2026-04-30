@@ -46,6 +46,15 @@ export type CoachFormState = {
   specialty: string;
   experience: string;
   achievements: string;
+  strengths: string;
+  supportTopics: string;
+  certifications: string;
+  organization: string;
+  youtubeUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  consultationAvailable: string;
+  paidConsultationAvailable: string;
   phone: string;
   publicEmail: string;
   loginEmail: string;
@@ -86,6 +95,15 @@ export type ProfileState = {
   followers: string;
   posts: string;
   selectedSports: string[];
+  strengths: string;
+  supportTopics: string;
+  certifications: string;
+  organization: string;
+  youtubeUrl: string;
+  xUrl: string;
+  instagramUrl: string;
+  consultationAvailable: boolean;
+  paidConsultationAvailable: boolean;
 };
 
 export type UserProfileState = ProfileState & {
@@ -148,6 +166,7 @@ export type FeedPost = {
   comments: number;
   replies: Reply[];
   media?: MediaAttachment[];
+  practiceMenu?: PracticeMenuTemplate;
   createdByUid?: string;
   authorHandle?: string;
   createdAtMs?: number;
@@ -179,6 +198,7 @@ export type CommunityPost = {
   cta: string;
   replies: Reply[];
   media?: MediaAttachment[];
+  practiceMenu?: PracticeMenuTemplate;
   createdByUid?: string;
   authorHandle?: string;
   createdAtMs?: number;
@@ -213,11 +233,35 @@ export type InteractionRecord = {
 
 export type ComposeTarget = "feed" | "questions" | "community";
 
+export type TodayMenuConditionKey =
+  | "under60"
+  | "beginner"
+  | "rainy"
+  | "preTournament"
+  | "fewTools"
+  | "mixedAbility";
+
+export type PracticeMenuTemplate = {
+  sport: string;
+  targetLevel: string;
+  grade: string;
+  participants: string;
+  durationMinutes: string;
+  tools: string;
+  purpose: string;
+  steps: string;
+  cautions: string;
+  commonMistakes: string;
+  arrangements: string;
+  conditionTags: TodayMenuConditionKey[];
+};
+
 export type ComposeState = {
   target: ComposeTarget;
   title: string;
   body: string;
   selectedSports: string[];
+  practiceMenu: PracticeMenuTemplate;
 };
 
 export type SearchContentItem = {
@@ -234,6 +278,7 @@ export type SearchContentItem = {
   tags: string[];
   replies: Reply[];
   media?: MediaAttachment[];
+  practiceMenu?: PracticeMenuTemplate;
   score: number;
   createdAtMs?: number;
 };
@@ -248,6 +293,15 @@ export type SearchAccountItem = {
   featured: boolean;
   role: string;
   selectedSports: string[];
+  strengths?: string;
+  supportTopics?: string;
+  certifications?: string;
+  organization?: string;
+  youtubeUrl?: string;
+  xUrl?: string;
+  instagramUrl?: string;
+  consultationAvailable?: boolean;
+  paidConsultationAvailable?: boolean;
 };
 
 export type UserDirectoryMeta = {
@@ -258,7 +312,12 @@ export type UserDirectoryMeta = {
   pinnedPostSource?: SearchContentFilterKey;
 };
 
-export type ProfileTabKey = "posts" | "answers" | "best_answers";
+export type ProfileTabKey =
+  | "posts"
+  | "answers"
+  | "best_answers"
+  | "likes"
+  | "bookmarks";
 
 export type PostDetailState = {
   id: string;
@@ -271,6 +330,7 @@ export type PostDetailState = {
   title: string;
   body: string;
   media?: MediaAttachment[];
+  practiceMenu?: PracticeMenuTemplate;
   replies: Reply[];
   likes?: number;
   reposts?: number;
@@ -346,6 +406,10 @@ export type TrendingCoachItem = SearchAccountItem & {
   reposts: number;
   bookmarks: number;
   bestAnswers: number;
+  repliesReceived: number;
+  repliesSent: number;
+  profileCompletionScore: number;
+  responseRate: number;
   lastActivityDays: number;
   score: number;
 };

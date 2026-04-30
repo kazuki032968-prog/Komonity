@@ -409,8 +409,9 @@ export const sharedStyles = StyleSheet.create({
     color: "#ffffff",
   },
   logoWrap: {
-    width: 168,
-    height: 56,
+    width: 184,
+    height: 62,
+    justifyContent: "center",
   },
   logoImage: {
     width: "100%",

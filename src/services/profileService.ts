@@ -109,5 +109,28 @@ export const mapUserDocumentToProfileState = (data: DocumentData): ProfileState 
       toArrayOfStrings(profileData.selectedSports).length > 0
         ? toArrayOfStrings(profileData.selectedSports)
         : defaultProfileState.selectedSports,
+    strengths:
+      typeof profileData.strengths === "string" ? profileData.strengths : "",
+    supportTopics:
+      typeof profileData.supportTopics === "string"
+        ? profileData.supportTopics
+        : "",
+    certifications:
+      typeof profileData.certifications === "string"
+        ? profileData.certifications
+        : "",
+    organization:
+      typeof profileData.organization === "string"
+        ? profileData.organization
+        : "",
+    youtubeUrl:
+      typeof profileData.youtubeUrl === "string" ? profileData.youtubeUrl : "",
+    xUrl: typeof profileData.xUrl === "string" ? profileData.xUrl : "",
+    instagramUrl:
+      typeof profileData.instagramUrl === "string"
+        ? profileData.instagramUrl
+        : "",
+    consultationAvailable: profileData.consultationAvailable === true,
+    paidConsultationAvailable: profileData.paidConsultationAvailable === true,
   };
 };
