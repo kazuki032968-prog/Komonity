@@ -8,20 +8,33 @@ import { colors } from "../constants/theme";
  */
 export const sharedStyles = StyleSheet.create({
   pageHeaderCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 28,
-    gap: 12,
-  },
-  pageIntroCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: "#ffffff",
     borderRadius: 28,
     borderWidth: 1,
     borderColor: colors.line,
     padding: 24,
+    gap: 12,
+  },
+  pageIntroCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 22,
     gap: 10,
+  },
+  accordionTitleRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  accordionToggleText: {
+    color: colors.accent,
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: "800",
   },
   backButton: {
     alignSelf: "flex-start",

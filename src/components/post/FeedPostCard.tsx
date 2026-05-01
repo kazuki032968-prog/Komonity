@@ -89,9 +89,9 @@ export function FeedPostCard({
             <DefaultAvatarIcon size={28} />
           </View>
           <View style={styles.authorTextBlock}>
-            <Text style={styles.cardTitle}>{post.title}</Text>
+            <Text style={styles.authorName}>{post.author}</Text>
             <Text style={styles.cardMeta}>
-              {post.author} ・ {post.role}
+              {post.role}
             </Text>
           </View>
         </Pressable>
@@ -108,6 +108,7 @@ export function FeedPostCard({
           })
         }
       >
+        <Text style={styles.cardTitle}>{post.title}</Text>
         <View style={styles.sportChipRow}>
           {post.sports.map((sport) => (
             <View key={sport} style={styles.sportChip}>

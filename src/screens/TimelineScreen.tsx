@@ -7,6 +7,7 @@ import {
   DefaultAvatarIcon,
   ExpandableBody,
   MediaGallery,
+  PageIntro,
   ReplyList,
   RichTextRenderer,
 } from "../components/shared";
@@ -96,12 +97,12 @@ export function TimelineScreen({
 }) {
   return (
     <View style={[styles.pageContainer, styles.timelineScreen]}>
-      <View style={styles.timelineIntroBar}>
-        <Text style={styles.timelineIntroTitle}>タイムライン</Text>
-        <Text style={styles.timelineIntroText}>
-          見たい投稿一覧を切り替えながら確認できます。
-        </Text>
-      </View>
+      <PageIntro
+        title="タイムライン"
+        description="コーチ・指導者同士でつながり、学び、成長する。現場の悩みをシェアして、より良い指導を。"
+        collapsible={true}
+        styles={styles}
+      />
       <View style={styles.timelineSectionScrollShell}>
         <ScrollView
           horizontal={true}
@@ -169,9 +170,9 @@ export function TimelineScreen({
                           <DefaultAvatarIcon size={28} />
                         </View>
                         <View style={styles.authorTextBlock}>
-                          <Text style={styles.cardTitle}>{item.title}</Text>
+                          <Text style={styles.authorName}>{item.author}</Text>
                           <Text style={styles.cardMeta}>
-                            {item.author} ・ {item.role}
+                            {item.role}
                           </Text>
                         </View>
                       </Pressable>
@@ -188,6 +189,7 @@ export function TimelineScreen({
                         })
                       }
                     >
+                      <Text style={styles.cardTitle}>{item.title}</Text>
                       {item.sports.length > 0 ? (
                         <View style={styles.sportChipRow}>
                           {item.sports.map((sport) => (
@@ -255,9 +257,9 @@ export function TimelineScreen({
                           <DefaultAvatarIcon size={28} />
                         </View>
                         <View style={styles.authorTextBlock}>
-                          <Text style={styles.cardTitle}>{post.title}</Text>
+                          <Text style={styles.authorName}>{post.author}</Text>
                           <Text style={styles.cardMeta}>
-                            {post.author} ・ {post.role}
+                            {post.role}
                           </Text>
                         </View>
                       </Pressable>
@@ -274,6 +276,7 @@ export function TimelineScreen({
                         })
                       }
                     >
+                      <Text style={styles.cardTitle}>{post.title}</Text>
                       <View style={styles.sportChipRow}>
                         {post.sports.map((sport) => (
                           <View key={sport} style={styles.sportChip}>
@@ -502,9 +505,9 @@ export function TimelineScreen({
                           <DefaultAvatarIcon size={28} />
                         </View>
                         <View style={styles.authorTextBlock}>
-                          <Text style={styles.cardTitle}>{post.title}</Text>
+                          <Text style={styles.authorName}>{post.author}</Text>
                           <Text style={styles.cardMeta}>
-                            {post.author} ・ {post.role}
+                            {post.role}
                           </Text>
                         </View>
                       </Pressable>
@@ -521,6 +524,7 @@ export function TimelineScreen({
                         })
                       }
                     >
+                      <Text style={styles.cardTitle}>{post.title}</Text>
                       {followingPostDisplay.bodyText ? (
                         <ExpandableBody
                           id={`following:${post.id}`}

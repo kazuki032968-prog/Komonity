@@ -2,11 +2,9 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { User } from "firebase/auth";
 
-import { COLLECTIONS } from "../constants/app";
 import {
   DefaultAvatarIcon,
   ExpandableBody,
-  FeedbackBanner,
   MediaGallery,
   PageIntro,
   RegistrationHeader,
@@ -21,7 +19,6 @@ import {
 import type {
   CommunityPost,
   FeedPost,
-  InteractionRecord,
   NotificationItem,
   PostDetailState,
   QuestionPost,
@@ -49,14 +46,6 @@ type OpenProfilePayload = {
 type OpenPostDetailPayload = {
   detail: PostDetailState;
   backScreen: ScreenKey;
-};
-
-type ToggleInteractionPayload = {
-  collectionName:
-    | typeof COLLECTIONS.likes
-    | typeof COLLECTIONS.reposts
-    | typeof COLLECTIONS.bookmarks;
-  detail: PostDetailState;
 };
 
 /**
@@ -170,6 +159,7 @@ export function ExpertsScreen({
       <PageIntro
         title="話題の指導者"
         description="全種目の指導者を、反応量と更新頻度をもとに並べています。"
+        collapsible={true}
       />
       <View style={styles.stack}>
         {trendingCoaches.length === 0 ? (
@@ -360,7 +350,8 @@ export function NotificationsScreen({
           <RegistrationHeader
             title="通知"
             description="いいね、返信、保存、再投稿、投稿通知に設定したアカウントの新規投稿を確認できます。"
-            onBack={onBack}
+            collapsible={true}
+            showBackButton={false}
           />
           <View style={styles.stack}>
             {notificationItems.length === 0 ? (
@@ -641,7 +632,13 @@ function LoginRequiredPanel({
 }) {
   return (
     <>
-      <RegistrationHeader title={title} description={description} onBack={onBack} />
+      <RegistrationHeader
+        title={title}
+        description={description}
+        onBack={onBack}
+        collapsible={true}
+        showBackButton={false}
+      />
       <View style={styles.registrationCard}>
         <View style={styles.registrationFlowCard}>
           <Text style={styles.registrationFlowText}>{body}</Text>

@@ -7,7 +7,6 @@ import type {
   QuestionPost,
   Reply,
   SearchContentFilterKey,
-  SearchContentItem,
   SearchContentItem as SearchItem,
   CommunityPost,
 } from "../types/app";

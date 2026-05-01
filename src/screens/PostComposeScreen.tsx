@@ -41,7 +41,6 @@ export function PostComposeScreen({
   authMessage,
   authError,
   isPublishing,
-  onBack,
   onGoToRegister,
   onGoToLogin,
   onUpdateComposeState,
@@ -63,7 +62,6 @@ export function PostComposeScreen({
   authMessage: string;
   authError: string;
   isPublishing: boolean;
-  onBack: () => void;
   onGoToRegister: () => void;
   onGoToLogin: () => void;
   onUpdateComposeState: <K extends Exclude<keyof ComposeState, "selectedSports">>(
@@ -96,7 +94,8 @@ export function PostComposeScreen({
             ? "指導員はメニュー・戦術へ知見や練習メニューを投稿できます。リプライは全員が参加できます。"
             : "顧問は相談広場またはコミュニティへ投稿できます。リプライは全員が参加できます。"
         }
-        onBack={onBack}
+        collapsible={true}
+        showBackButton={false}
       />
       {authMessage ? <FeedbackBanner kind="success" message={authMessage} /> : null}
       {authError ? <FeedbackBanner kind="error" message={authError} /> : null}

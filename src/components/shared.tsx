@@ -1,13 +1,11 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Image, Pressable, Text, TextInput, View } from "react-native";
 
 import { colors } from "../constants/theme";
 import { sharedStyles } from "../styles/shared";
 import type {
   ActivityBadge,
-  AdvisorFormState,
-  CoachFormState,
-  ExternalLink,
   LocalMediaAsset,
   MediaAttachment,
   Reply,
@@ -168,20 +166,49 @@ export function RegistrationHeader({
   title,
   description,
   onBack,
+  collapsible = false,
+  initiallyExpanded = false,
+  showBackButton = true,
   styles = EMPTY_STYLES,
 }: {
   title: string;
   description: string;
-  onBack: () => void;
+  onBack?: () => void;
+  collapsible?: boolean;
+  initiallyExpanded?: boolean;
+  showBackButton?: boolean;
   styles?: SharedStyles;
 }) {
+  const [isExpanded, setIsExpanded] = useState(
+    !collapsible || initiallyExpanded
+  );
+
+  const showDescription = !collapsible || isExpanded;
+
   return (
     <View style={styles.pageHeaderCard}>
-      <Pressable onPress={onBack} style={styles.backButton}>
-        <Text style={styles.backButtonText}>戻る</Text>
+      {onBack && showBackButton ? (
+        <Pressable onPress={onBack} style={styles.backButton}>
+          <Text style={styles.backButtonText}>戻る</Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole={collapsible ? "button" : undefined}
+        accessibilityLabel={collapsible ? `${title}の説明を開閉` : undefined}
+        style={styles.accordionTitleRow}
+        disabled={!collapsible}
+        onPress={() => setIsExpanded((current) => !current)}
+      >
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {collapsible ? (
+          <Text style={styles.accordionToggleText}>
+            {isExpanded ? "−" : "+"}
+          </Text>
+        ) : null}
       </Pressable>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{description}</Text>
+      {showDescription ? (
+        <Text style={styles.sectionSubtitle}>{description}</Text>
+      ) : null}
     </View>
   );
 }
@@ -189,16 +216,41 @@ export function RegistrationHeader({
 export function PageIntro({
   title,
   description,
+  collapsible = false,
+  initiallyExpanded = false,
   styles = EMPTY_STYLES,
 }: {
   title: string;
   description: string;
+  collapsible?: boolean;
+  initiallyExpanded?: boolean;
   styles?: SharedStyles;
 }) {
+  const [isExpanded, setIsExpanded] = useState(
+    !collapsible || initiallyExpanded
+  );
+
+  const showDescription = !collapsible || isExpanded;
+
   return (
     <View style={styles.pageIntroCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{description}</Text>
+      <Pressable
+        accessibilityRole={collapsible ? "button" : undefined}
+        accessibilityLabel={collapsible ? `${title}の説明を開閉` : undefined}
+        style={styles.accordionTitleRow}
+        disabled={!collapsible}
+        onPress={() => setIsExpanded((current) => !current)}
+      >
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {collapsible ? (
+          <Text style={styles.accordionToggleText}>
+            {isExpanded ? "−" : "+"}
+          </Text>
+        ) : null}
+      </Pressable>
+      {showDescription ? (
+        <Text style={styles.sectionSubtitle}>{description}</Text>
+      ) : null}
     </View>
   );
 }
