@@ -469,6 +469,13 @@ export const toTimestampMs = (value: unknown) => {
 };
 
 /**
+ * 公開日時が未来の投稿を一覧に出さないための判定です。
+ * Firestore の serverTimestamp 反映前など日時未設定の投稿は、投稿直後のちらつきを避けるため表示対象にします。
+ */
+export const isPublishedAtOrBeforeNow = (createdAtMs?: number, nowMs = Date.now()) =>
+  typeof createdAtMs !== "number" || createdAtMs <= nowMs;
+
+/**
  * 同じ id を持つ項目を後勝ちでまとめ、表示順を保った配列を返します。
  */
 export const mergeItemsById = <T extends { id: string }>(base: T[], incoming: T[]) => {

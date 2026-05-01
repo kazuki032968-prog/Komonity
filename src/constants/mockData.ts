@@ -57,11 +57,22 @@ const conditionKeys: TodayMenuConditionKey[] = [
   "mixedAbility",
 ];
 
-const baseTime = Date.UTC(2026, 3, 30, 9, 0, 0);
-const dayMs = 24 * 60 * 60 * 1000;
+const mockStartTime = Date.UTC(2026, 3, 21, 8, 13, 27);
+const mockEndTime = Date.UTC(2026, 4, 10, 14, 46, 38);
 
 const pick = <T,>(items: readonly T[], index: number) => items[index % items.length];
 const pad = (value: number) => String(value).padStart(3, "0");
+const createMockTimestamp = (index: number, total: number, offsetMinutes = 0) => {
+  const range = mockEndTime - mockStartTime;
+  const ratio = total <= 1 ? 0 : index / (total - 1);
+  const base = mockEndTime - Math.floor(range * ratio);
+  const jitter =
+    ((index * 37) % 17) * 60 * 1000 +
+    ((index * 71) % 53) * 1000 +
+    offsetMinutes * 60 * 1000;
+
+  return base - jitter;
+};
 
 export const mockCoachAccounts: SearchAccountItem[] = Array.from({ length: 100 }, (_, index) => {
   const number = index + 1;
@@ -123,7 +134,7 @@ export const mockDirectoryMetaMap: Record<string, UserDirectoryMeta> =
     return accumulator;
   }, {});
 
-export const mockFeedPosts: FeedPost[] = Array.from({ length: 140 }, (_, index) => {
+export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) => {
   const coach = mockCoachAccounts[index % mockCoachAccounts.length];
   const sport = coach.selectedSports[index % coach.selectedSports.length];
   const level = pick(levelOptions, index);
@@ -172,11 +183,11 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 140 }, (_, index) 
       arrangements: "初心者が多い場合は距離を短くし、上級者は条件を追加します。",
       conditionTags,
     },
-    createdAtMs: baseTime - index * 6 * 60 * 60 * 1000,
+    createdAtMs: createMockTimestamp(index, 180),
   };
 });
 
-export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 70 }, (_, index) => {
+export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 96 }, (_, index) => {
   const advisor = mockAdvisorAccounts[index % mockAdvisorAccounts.length];
   const coach = mockCoachAccounts[(index * 3) % mockCoachAccounts.length];
   const sport = advisor.selectedSports[0];
@@ -202,11 +213,11 @@ export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 70 }, (_, 
         replies: [],
       },
     ],
-    createdAtMs: baseTime - index * 10 * 60 * 60 * 1000,
+    createdAtMs: createMockTimestamp(index, 96, 23),
   };
 });
 
-export const mockCommunityPosts: CommunityPost[] = Array.from({ length: 50 }, (_, index) => {
+export const mockCommunityPosts: CommunityPost[] = Array.from({ length: 78 }, (_, index) => {
   const advisor = mockAdvisorAccounts[(index * 2) % mockAdvisorAccounts.length];
   const sport = advisor.selectedSports[0];
 
@@ -228,6 +239,6 @@ export const mockCommunityPosts: CommunityPost[] = Array.from({ length: 50 }, (_
         replies: [],
       },
     ],
-    createdAtMs: baseTime - index * dayMs,
+    createdAtMs: createMockTimestamp(index, 78, 41),
   };
 });

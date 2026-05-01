@@ -239,6 +239,7 @@ import {
   getPublicSiteUrl,
   getTrendingCoachScore,
   getTrendingScore,
+  isPublishedAtOrBeforeNow,
   mergeItemsById,
   normalizeHandle,
   parseFollowerCount,
@@ -1827,16 +1828,21 @@ export default function App() {
         .filter((record) => record.watcherUid === authUser.uid)
         .map((record) => record.targetUid)
     : [];
+  const currentTimeMs = Date.now();
   const filteredFeedPosts = feedTimeline.filter(
     (post) =>
-      !post.createdByUid || !currentBlockedUserIds.includes(post.createdByUid)
+      isPublishedAtOrBeforeNow(post.createdAtMs, currentTimeMs) &&
+      (!post.createdByUid || !currentBlockedUserIds.includes(post.createdByUid))
   );
   const visibleQuestionBoard = questionBoard.filter(
     (question) =>
-      !question.createdByUid || !currentBlockedUserIds.includes(question.createdByUid)
+      isPublishedAtOrBeforeNow(question.createdAtMs, currentTimeMs) &&
+      (!question.createdByUid || !currentBlockedUserIds.includes(question.createdByUid))
   );
   const visibleCommunityBoard = communityBoard.filter(
-    (item) => !item.createdByUid || !currentBlockedUserIds.includes(item.createdByUid)
+    (item) =>
+      isPublishedAtOrBeforeNow(item.createdAtMs, currentTimeMs) &&
+      (!item.createdByUid || !currentBlockedUserIds.includes(item.createdByUid))
   );
   const likeCountMap = likeRecords.reduce<Record<string, number>>((accumulator, record) => {
     const key = `${record.source}:${record.postId}`;
@@ -1884,7 +1890,7 @@ export default function App() {
     {}
   );
 
-  const followingFeedPosts = feedTimeline.filter(
+  const followingFeedPosts = filteredFeedPosts.filter(
     (post) =>
       post.createdByUid &&
       currentFollowingUserIds.includes(post.createdByUid) &&
@@ -1924,7 +1930,7 @@ export default function App() {
     },
     {
       label: "公開ナレッジ投稿",
-      value: formatCount(feedTimeline.length),
+      value: formatCount(filteredFeedPosts.length),
       note: "メニュー・戦術に公開されている投稿数",
     },
   ];
@@ -1942,7 +1948,7 @@ export default function App() {
     : selectedUserProfile.followers;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const allSearchContentItems: SearchContentItem[] = [
-    ...feedTimeline.map((post) => ({
+    ...filteredFeedPosts.map((post) => ({
       createdAtMs: post.createdAtMs,
       id: post.id,
       source: "feed" as const,
@@ -2063,7 +2069,7 @@ export default function App() {
       const bookmarks = bookmarkRecords.filter((record) =>
         authoredInteractionKeys.has(`${record.source}:${record.postId}`)
       ).length;
-      const bestAnswers = questionBoard.filter((question) => {
+      const bestAnswers = visibleQuestionBoard.filter((question) => {
         const bestReply = getBestAnswerReplyForQuestion(question) as Reply | undefined;
 
         return bestReply
@@ -2279,7 +2285,7 @@ export default function App() {
   const selectedProfilePostsValue = selectedUserProfile.uid
     ? String(authoredPostCountForUser(selectedUserProfile.uid, selectedUserProfile.name))
     : selectedUserProfile.posts;
-  const selectedUserQuestions = questionBoard.filter((question) =>
+  const selectedUserQuestions = visibleQuestionBoard.filter((question) =>
     userMatchesProfile({
       uid: question.createdByUid,
       name: question.author,
@@ -2287,7 +2293,7 @@ export default function App() {
       targetName: selectedUserProfile.name,
     })
   );
-  const selectedUserBestAnswers = questionBoard
+  const selectedUserBestAnswers = visibleQuestionBoard
     .map((question) => ({
       question,
       bestReply: getBestAnswerReplyForQuestion(question),
@@ -2424,7 +2430,7 @@ export default function App() {
     },
     []
   );
-  const currentUserBestAnswers = questionBoard
+  const currentUserBestAnswers = visibleQuestionBoard
     .map((question) => ({
       question,
       bestReply: getBestAnswerReplyForQuestion(question),
@@ -2524,7 +2530,7 @@ export default function App() {
               }]
             : [];
         }),
-        ...feedTimeline
+        ...filteredFeedPosts
           .filter(
             (post) =>
               post.createdByUid &&
@@ -2606,7 +2612,7 @@ export default function App() {
       0
     );
     const repliesSent = authoredReplies.length;
-    const bestAnswers = questionBoard.filter((question) => {
+    const bestAnswers = visibleQuestionBoard.filter((question) => {
       const bestReply = getBestAnswerReplyForQuestion(question) as Reply | undefined;
 
       return bestReply
