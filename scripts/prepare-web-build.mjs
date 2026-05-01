@@ -8,12 +8,16 @@ const distDir = resolve(rootDir, "dist");
 const indexPath = resolve(distDir, "index.html");
 const ogImageSourcePath = resolve(rootDir, "assets", "logo-komonity-header.png");
 const ogImageOutputPath = resolve(distDir, "ogp.png");
+const adsTxtOutputPath = resolve(distDir, "ads.txt");
 
 const siteUrl = "https://komonity-510b7.web.app";
 const title = "Komonity | 顧問の先生と指導者をつなぐ部活支援SNS";
 const description =
   "Komonityは、専門外の部活指導で悩む顧問の先生と知見を持つ指導者をつなぎ、練習メニュー・戦術・相談・コミュニティで現場の知見を共有できるサービスです。";
 const ogImageUrl = `${siteUrl}/ogp.png`;
+const adsenseClientId = "ca-pub-5628186161852570";
+const adsensePublisherId = adsenseClientId.replace(/^ca-/, "");
+const adsTxtContent = `google.com, ${adsensePublisherId}, DIRECT, f08c47fec0942fa0\n`;
 
 const escapeHtml = (value) =>
   value
@@ -58,13 +62,27 @@ const metaBlock = `
     <meta name="twitter:image" content="${ogImageUrl}" />
     <!-- komonity-seo:end -->`;
 
+const adsenseBlock = `
+    <!-- komonity-adsense:start -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}" crossorigin="anonymous"></script>
+    <!-- komonity-adsense:end -->`;
+
 html = html.replace(
   /\n\s*<!-- komonity-seo:start -->[\s\S]*?<!-- komonity-seo:end -->/u,
+  ""
+);
+html = html.replace(
+  /\n\s*<!-- komonity-adsense:start -->[\s\S]*?<!-- komonity-adsense:end -->/u,
   ""
 );
 html = html.replace(
   /(<meta name="viewport"[^>]*\/>)/u,
   `$1${metaBlock}`
 );
+html = html.replace(
+  /(\n\s*<!-- The `react-native-web` recommended style reset:)/u,
+  `${adsenseBlock}$1`
+);
 
 writeFileSync(indexPath, html);
+writeFileSync(adsTxtOutputPath, adsTxtContent);
