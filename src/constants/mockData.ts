@@ -1,6 +1,7 @@
 import type {
   CommunityPost,
   FeedPost,
+  FollowRecord,
   QuestionPost,
   SearchAccountItem,
   TodayMenuConditionKey,
@@ -24,26 +25,6 @@ const sports = [
   "書道",
   "科学",
   "ロボット",
-] as const;
-
-const coachNames = [
-  "青葉トレーニングラボ",
-  "北斗メニュー研究所",
-  "桜川アカデミー",
-  "みなと戦術室",
-  "白鳥コンディショニング",
-  "風間コーチング",
-  "藤沢ベースアップ",
-  "千歳スキル工房",
-] as const;
-
-const advisorNames = [
-  "夕凪顧問",
-  "北町クラブ顧問",
-  "青空部活ノート",
-  "緑丘サポート",
-  "南風先生",
-  "はじめて顧問",
 ] as const;
 
 const regions = [
@@ -850,17 +831,47 @@ const createMockTimestamp = (index: number, total: number, offsetMinutes = 0) =>
   return base - jitter;
 };
 
+const accountBelongsToSport = (account: SearchAccountItem, sport: string) =>
+  account.name.includes(sport) || account.bio.includes(`${sport}を`);
+
+/**
+ * モック投稿の投稿者を、投稿種目と主担当が一致する指導者から選びます。
+ * selectedSports には「見ておきたい種目」も含まれるため、投稿者選定では使いすぎないようにします。
+ */
+const pickCoachForSport = (sport: string, index: number) => {
+  const matchedCoaches = mockCoachAccounts.filter((account) =>
+    accountBelongsToSport(account, sport)
+  );
+
+  return matchedCoaches.length > 0
+    ? pick(matchedCoaches, index)
+    : pick(mockCoachAccounts, index);
+};
+
+/**
+ * 相談・コミュニティ投稿も、投稿種目と主担当が一致する顧問から選びます。
+ * これにより「サッカー顧問がサッカー相談を投稿する」ような自然な並びになります。
+ */
+const pickAdvisorForSport = (sport: string, index: number) => {
+  const matchedAdvisors = mockAdvisorAccounts.filter((account) =>
+    accountBelongsToSport(account, sport)
+  );
+
+  return matchedAdvisors.length > 0
+    ? pick(matchedAdvisors, index)
+    : pick(mockAdvisorAccounts, index);
+};
+
 export const mockCoachAccounts: SearchAccountItem[] = Array.from({ length: 100 }, (_, index) => {
   const number = index + 1;
   const sportA = pick(sports, index);
   const sportB = pick(sports, index + 5);
-  const baseName = pick(coachNames, index);
   const region = pick(regions, index);
   const profileLabel = pick(coachProfileLabels, index + 2);
   const displayName =
     index % 5 === 0
-      ? `${region}${baseName}`
-      : `${region}${sportA}${profileLabel}`;
+      ? `Komonity公式${sportA}教室`
+      : `Komonity公式${sportA}${profileLabel}`;
   const handleBase = toHandleText(`${region}_${sportA}_${profileLabel}`);
 
   return {
@@ -868,14 +879,14 @@ export const mockCoachAccounts: SearchAccountItem[] = Array.from({ length: 100 }
     name: displayName,
     handle: `@${handleBase}_${pad(number)}`,
     bio: `${sportA}を中心に、顧問の先生がそのまま使いやすい練習設計と声かけ例を発信しています。`,
-    followers: String(18 + ((index * 37) % 2400)),
+    followers: "0",
     featured: index < 12,
     role: index % 9 === 0 ? "指導員組織アカウント" : "指導員アカウント",
     selectedSports: Array.from(new Set([sportA, sportB])),
     strengths: `${sportA}の基礎づくり、短時間メニュー、試合前の確認`,
     supportTopics: "初心者対応、人数差がある日の運営、怪我予防、練習のマンネリ解消",
     certifications: index % 3 === 0 ? "公認指導者資格 / 救急講習修了" : "地域クラブ指導経験あり",
-    organization: index % 4 === 0 ? `${baseName}スクール` : "",
+    organization: index % 4 === 0 ? `Komonity公式${sportA}スクール` : "",
     youtubeUrl: index % 5 === 0 ? `https://example.com/youtube/mock-coach-${number}` : "",
     xUrl: index % 4 === 0 ? `https://example.com/x/mock-coach-${number}` : "",
     instagramUrl: index % 6 === 0 ? `https://example.com/instagram/mock-coach-${number}` : "",
@@ -888,10 +899,10 @@ export const mockAdvisorAccounts: SearchAccountItem[] = Array.from({ length: 50 
   const number = index + 1;
   const sportA = pick(sports, index + 2);
   const sportB = pick(sports, index + 9);
-  const baseName = pick(advisorNames, index);
   const region = pick(regions, index + 4);
   const profileLabel = pick(advisorProfileLabels, index);
-  const displayName = index % 4 === 0 ? `${region}${baseName}` : `${region}${sportA}${profileLabel}`;
+  const displayName =
+    index % 4 === 0 ? `${region}${sportA}顧問ノート` : `${region}${sportA}${profileLabel}`;
   const handleBase = toHandleText(`${region}_${sportA}_${profileLabel}`);
 
   return {
@@ -911,6 +922,28 @@ export const mockDirectoryAccounts: SearchAccountItem[] = [
   ...mockAdvisorAccounts,
 ];
 
+export const mockFollowRecords: FollowRecord[] = mockCoachAccounts.flatMap(
+  (coach, coachIndex) => {
+    const followerPool = mockDirectoryAccounts.filter(
+      (account) => account.id !== coach.id
+    );
+    const followerCount = Math.min(
+      followerPool.length,
+      18 + ((coachIndex * 17) % 92)
+    );
+
+    return Array.from({ length: followerCount }, (_, followerIndex) => {
+      const follower = pick(followerPool, coachIndex * 13 + followerIndex * 7);
+
+      return {
+        id: `mock-follow-${coach.id}-${follower.id}`,
+        followerUid: follower.id,
+        followingUid: coach.id,
+      };
+    });
+  }
+);
+
 export const mockDirectoryMetaMap: Record<string, UserDirectoryMeta> =
   mockDirectoryAccounts.reduce<Record<string, UserDirectoryMeta>>((accumulator, account) => {
     accumulator[account.id] = {
@@ -923,9 +956,8 @@ export const mockDirectoryMetaMap: Record<string, UserDirectoryMeta> =
 
 export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) => {
   const seed = pick(practiceMenuSeeds, index);
-  const coach =
-    mockCoachAccounts.find((account) => account.selectedSports.includes(seed.sport)) ??
-    mockCoachAccounts[index % mockCoachAccounts.length];
+  const coach = pickCoachForSport(seed.sport, index);
+  const advisor = pickAdvisorForSport(seed.sport, index);
   const scenario = pick(scenarioLabels, index);
   const naturalTags = Array.from(new Set([seed.sport, ...seed.tags]));
 
@@ -945,10 +977,10 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
     replies: [
       {
         id: `mock-feed-${index + 1}-reply-1`,
-        author: pick(mockAdvisorAccounts, index).name,
-        authorHandle: pick(mockAdvisorAccounts, index).handle,
-        createdByUid: pick(mockAdvisorAccounts, index).id,
-        body: "この流れなら現場でも回しやすそうです。人数が少ない日にも試してみます。",
+        author: advisor.name,
+        authorHandle: advisor.handle,
+        createdByUid: advisor.id,
+        body: `${seed.sport}担当として、この流れなら現場でも回しやすそうです。人数が少ない日にも試してみます。`,
         replies: [],
       },
     ],
@@ -972,12 +1004,8 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
 
 export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 96 }, (_, index) => {
   const seed = pick(questionSeeds, index);
-  const advisor =
-    mockAdvisorAccounts.find((account) => account.selectedSports.includes(seed.sport)) ??
-    mockAdvisorAccounts[index % mockAdvisorAccounts.length];
-  const coach =
-    mockCoachAccounts.find((account) => account.selectedSports.includes(seed.sport)) ??
-    mockCoachAccounts[(index * 3) % mockCoachAccounts.length];
+  const advisor = pickAdvisorForSport(seed.sport, index);
+  const coach = pickCoachForSport(seed.sport, index * 3);
 
   return {
     id: `mock-question-${pad(index + 1)}`,
@@ -1006,12 +1034,8 @@ export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 96 }, (_, 
 
 export const mockCommunityPosts: CommunityPost[] = Array.from({ length: 78 }, (_, index) => {
   const seed = pick(communitySeeds, index);
-  const advisor =
-    mockAdvisorAccounts.find((account) => account.selectedSports.includes(seed.sport)) ??
-    mockAdvisorAccounts[(index * 2) % mockAdvisorAccounts.length];
-  const coach =
-    mockCoachAccounts.find((account) => account.selectedSports.includes(seed.sport)) ??
-    pick(mockCoachAccounts, index);
+  const advisor = pickAdvisorForSport(seed.sport, index * 2);
+  const coach = pickCoachForSport(seed.sport, index);
 
   return {
     id: `mock-community-${pad(index + 1)}`,

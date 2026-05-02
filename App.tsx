@@ -63,6 +63,7 @@ import {
   mockDirectoryAccounts,
   mockDirectoryMetaMap,
   mockFeedPosts,
+  mockFollowRecords,
   mockQuestionPosts,
 } from "./src/constants/mockData";
 import { useTimelineSwipe } from "./src/hooks/useTimelineSwipe";
@@ -199,6 +200,12 @@ import {
   buildPostPath,
 } from "./src/utils/appUtils";
 
+/**
+ * Firestore 由来の実ユーザーを、表示順でモックユーザーより優先するための判定です。
+ */
+const isMockAccount = (accountId?: string) =>
+  typeof accountId === "string" && accountId.startsWith("mock-");
+
 export default function App() {
   const isHandlingBrowserNavigation = useRef(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenKey>("top");
@@ -243,7 +250,8 @@ export default function App() {
     useState<SearchAccountItem[]>(mockDirectoryAccounts);
   const [directoryMetaMap, setDirectoryMetaMap] =
     useState<Record<string, UserDirectoryMeta>>(mockDirectoryMetaMap);
-  const [followRecords, setFollowRecords] = useState<FollowRecord[]>([]);
+  const [followRecords, setFollowRecords] =
+    useState<FollowRecord[]>(mockFollowRecords);
   const [blockRecords, setBlockRecords] = useState<BlockRecord[]>([]);
   const [postAlertRecords, setPostAlertRecords] = useState<PostAlertRecord[]>([]);
   const [likeRecords, setLikeRecords] = useState<InteractionRecord[]>([]);
@@ -458,10 +466,10 @@ export default function App() {
         });
 
         const mergedAccounts = new Map<string, SearchAccountItem>();
-        mockDirectoryAccounts.forEach((account) => {
+        firestoreAccounts.forEach((account) => {
           mergedAccounts.set(account.id, account);
         });
-        firestoreAccounts.forEach((account) => {
+        mockDirectoryAccounts.forEach((account) => {
           mergedAccounts.set(account.id, account);
         });
 
@@ -484,8 +492,8 @@ export default function App() {
   }, [db]);
 
   useEffect(() => {
-    if (!db || !authUser) {
-      setFollowRecords([]);
+    if (!db) {
+      setFollowRecords(mockFollowRecords);
       return;
     }
 
@@ -510,15 +518,15 @@ export default function App() {
           })
           .filter((item): item is FollowRecord => Boolean(item));
 
-        setFollowRecords(nextFollows);
+        setFollowRecords([...mockFollowRecords, ...nextFollows]);
       },
       () => {
-        setFollowRecords([]);
+        setFollowRecords(mockFollowRecords);
       }
     );
 
     return unsubscribeFollows;
-  }, [authUser, db]);
+  }, [db]);
 
   useEffect(() => {
     if (!db || !authUser) {
@@ -2080,7 +2088,16 @@ export default function App() {
         }),
       };
     })
-    .sort((left, right) => right.score - left.score);
+    .sort((left, right) => {
+      const realUserPriority =
+        Number(isMockAccount(left.id)) - Number(isMockAccount(right.id));
+
+      if (realUserPriority !== 0) {
+        return realUserPriority;
+      }
+
+      return right.score - left.score;
+    });
 
   const buildRepostedItemsForUser = (uid?: string, name?: string): ProfilePostItem[] => {
     if (!uid) {
@@ -2840,6 +2857,13 @@ export default function App() {
         .includes(normalizedSearchQuery);
     })
     .sort((left, right) => {
+      const realUserPriority =
+        Number(isMockAccount(left.id)) - Number(isMockAccount(right.id));
+
+      if (realUserPriority !== 0) {
+        return realUserPriority;
+      }
+
       const scoreDiff =
         getAccountSearchScore(right, normalizedSearchQuery) -
         getAccountSearchScore(left, normalizedSearchQuery);
