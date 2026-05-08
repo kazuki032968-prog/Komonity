@@ -264,7 +264,9 @@ export function TimelineScreen({
                         </View>
                       </Pressable>
                       <View style={styles.pill}>
-                        <Text style={styles.pillText}>メニュー・戦術</Text>
+                        <Text style={styles.pillText}>
+                          {post.feedKind === "strategy" ? "戦術" : "メニュー"}
+                        </Text>
                       </View>
                     </View>
                     <Pressable

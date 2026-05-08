@@ -2,6 +2,147 @@ import { StyleSheet } from "react-native";
 
 import { colors } from "../constants/theme";
 
+type StyleRecord = Record<string, unknown>;
+
+const darkTheme = {
+  background: "#070f1f",
+  surface: "#0f172a",
+  surfaceElevated: "#111827",
+  surfaceStrong: "#1f2937",
+  text: "#f8fafc",
+  muted: "#cbd5e1",
+  line: "#334155",
+  brand: "#f59e0b",
+  brandSoft: "#422006",
+  accent: "#5eead4",
+  accentStrong: "#14b8a6",
+  accentSoft: "#123b39",
+  success: "#86efac",
+  successSoft: "#052e16",
+  error: "#fca5a5",
+  errorSoft: "#451a1a",
+} as const;
+
+const colorReplacementByProperty: Record<string, Record<string, string>> = {
+  color: {
+    [colors.text]: darkTheme.text,
+    [colors.muted]: darkTheme.muted,
+    [colors.brand]: darkTheme.brand,
+    [colors.accent]: darkTheme.accent,
+    [colors.success]: darkTheme.success,
+    [colors.error]: darkTheme.error,
+    "#111827": darkTheme.text,
+    "#1f2937": darkTheme.text,
+    "#4b5563": darkTheme.muted,
+    "#9ca3af": darkTheme.muted,
+    "#b42318": darkTheme.error,
+    "#9a6700": "#facc15",
+  },
+  backgroundColor: {
+    "#ffffff": darkTheme.surface,
+    [colors.surfaceStrong]: darkTheme.surfaceStrong,
+    [colors.brandSoft]: darkTheme.brandSoft,
+    [colors.accentSoft]: darkTheme.accentSoft,
+    [colors.successSoft]: darkTheme.successSoft,
+    [colors.errorSoft]: darkTheme.errorSoft,
+    "#fbfaf7": darkTheme.surfaceElevated,
+    "#f7faf9": darkTheme.surfaceElevated,
+    "#f8fafc": darkTheme.surfaceElevated,
+    "#f9fafb": darkTheme.surfaceElevated,
+    "#fffaf0": "#1f2937",
+    "#fff7ed": darkTheme.brandSoft,
+    "#fff1c7": darkTheme.brandSoft,
+    "#e8f5f2": darkTheme.accentSoft,
+    "#fef3c7": darkTheme.brandSoft,
+    "rgba(255, 255, 255, 0.96)": "rgba(15, 23, 42, 0.96)",
+    "rgba(255, 255, 255, 0.92)": "rgba(15, 23, 42, 0.92)",
+    "rgba(255, 255, 255, 0.84)": "rgba(15, 23, 42, 0.84)",
+    "rgba(255, 255, 255, 0.72)": "rgba(15, 23, 42, 0.72)",
+  },
+  borderColor: {
+    [colors.line]: darkTheme.line,
+    [colors.accent]: darkTheme.accentStrong,
+    [colors.brand]: darkTheme.brand,
+    "#ffffff": darkTheme.background,
+    "#e5e7eb": darkTheme.line,
+    "#d1d5db": darkTheme.line,
+    "#ef4444": "#f87171",
+    "rgba(223, 211, 191, 0.75)": "rgba(148, 163, 184, 0.35)",
+    "rgba(15, 118, 110, 0.24)": "rgba(94, 234, 212, 0.35)",
+  },
+};
+
+const darkStyleOverrides: Record<string, Partial<StyleRecord>> = {
+  safeArea: {
+    backgroundColor: darkTheme.background,
+  },
+  appContent: {
+    backgroundColor: darkTheme.background,
+  },
+  globalHeader: {
+    backgroundColor: darkTheme.background,
+  },
+  bottomComposeButton: {
+    backgroundColor: darkTheme.accentStrong,
+    boxShadow: "0 18px 34px rgba(20, 184, 166, 0.28)",
+  },
+  bottomComposeIcon: {
+    color: "#ffffff",
+  },
+  bottomComposeLabel: {
+    color: "#ffffff",
+  },
+  modalBackdrop: {
+    backgroundColor: "rgba(2, 6, 23, 0.72)",
+  },
+  menuBackdrop: {
+    backgroundColor: "rgba(2, 6, 23, 0.68)",
+  },
+  menuLine: {
+    backgroundColor: darkTheme.text,
+  },
+  bottomNavNotificationDot: {
+    borderColor: darkTheme.surface,
+  },
+};
+
+const resolveDarkColor = (property: string, value: string) => {
+  const directMap = colorReplacementByProperty[property];
+  if (directMap?.[value]) {
+    return directMap[value];
+  }
+
+  if (
+    (property === "backgroundColor" || property === "borderColor") &&
+    value.startsWith("rgba(255, 255, 255,")
+  ) {
+    return value.replace("rgba(255, 255, 255,", "rgba(15, 23, 42,");
+  }
+
+  return value;
+};
+
+const createDarkStyle = (style: unknown, key: string) => {
+  const flattened = StyleSheet.flatten(style) as StyleRecord | undefined;
+  if (!flattened) {
+    return {};
+  }
+
+  const themed = Object.entries(flattened).reduce<StyleRecord>(
+    (nextStyle, [property, value]) => {
+      nextStyle[property] =
+        typeof value === "string" ? resolveDarkColor(property, value) : value;
+      return nextStyle;
+    },
+    {}
+  );
+
+  return {
+    ...themed,
+    ...(darkStyleOverrides[key] ?? {}),
+  };
+};
+
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -862,6 +1003,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   searchAvatarText: {
     color: colors.brand,
@@ -1356,6 +1498,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
+    overflow: "hidden",
   },
   authorAvatarText: {
     color: colors.brand,
@@ -2576,3 +2719,9 @@ export const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+
+export const darkStyles = StyleSheet.create(
+  Object.fromEntries(
+    Object.entries(styles).map(([key, style]) => [key, createDarkStyle(style, key)])
+  )
+) as typeof styles;

@@ -1,7 +1,13 @@
-import { initialPracticeMenu, todayMenuConditionOptions } from "../constants/app";
+import {
+  initialPracticeMenu,
+  initialPracticeStrategy,
+  todayMenuConditionOptions,
+} from "../constants/app";
 import type {
+  FeedKind,
   MediaAttachment,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   Reply,
   TodayMenuConditionKey,
 } from "../types/app";
@@ -128,6 +134,57 @@ export const normalizePracticeMenu = (
 };
 
 /**
+ * Firestore の投稿種別を復元します。過去データはすべてメニュー投稿として扱います。
+ */
+export const normalizeFeedKind = (value: unknown): FeedKind =>
+  value === "strategy" ? "strategy" : "menu";
+
+/**
+ * Firestore の戦術テンプレートを安全に復元します。
+ */
+export const normalizePracticeStrategy = (
+  value: unknown
+): PracticeStrategyTemplate | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  const strategy = value as Partial<
+    Record<keyof PracticeStrategyTemplate, unknown>
+  >;
+  const normalized: PracticeStrategyTemplate = {
+    ...initialPracticeStrategy,
+    sport: typeof strategy.sport === "string" ? strategy.sport : "",
+    targetLevel:
+      typeof strategy.targetLevel === "string" ? strategy.targetLevel : "",
+    grade: typeof strategy.grade === "string" ? strategy.grade : "",
+    participants:
+      typeof strategy.participants === "string" ? strategy.participants : "",
+    phase: typeof strategy.phase === "string" ? strategy.phase : "",
+    objective:
+      typeof strategy.objective === "string" ? strategy.objective : "",
+    formation:
+      typeof strategy.formation === "string" ? strategy.formation : "",
+    roles: typeof strategy.roles === "string" ? strategy.roles : "",
+    triggers: typeof strategy.triggers === "string" ? strategy.triggers : "",
+    steps: typeof strategy.steps === "string" ? strategy.steps : "",
+    cautions: typeof strategy.cautions === "string" ? strategy.cautions : "",
+    commonMistakes:
+      typeof strategy.commonMistakes === "string"
+        ? strategy.commonMistakes
+        : "",
+    practiceDrill:
+      typeof strategy.practiceDrill === "string"
+        ? strategy.practiceDrill
+        : "",
+  };
+
+  return Object.values(normalized).some((item) => Boolean(String(item).trim()))
+    ? normalized
+    : undefined;
+};
+
+/**
  * 練習メニューテンプレートを Firestore 保存用のプレーンオブジェクトへ変換します。
  */
 export const serializePracticeMenuForFirestore = (
@@ -150,6 +207,33 @@ export const serializePracticeMenuForFirestore = (
     commonMistakes: menu.commonMistakes.trim(),
     arrangements: menu.arrangements.trim(),
     conditionTags: menu.conditionTags,
+  };
+};
+
+/**
+ * 戦術テンプレートを Firestore 保存用のプレーンオブジェクトへ変換します。
+ */
+export const serializePracticeStrategyForFirestore = (
+  strategy?: PracticeStrategyTemplate
+) => {
+  if (!strategy) {
+    return null;
+  }
+
+  return {
+    sport: strategy.sport.trim(),
+    targetLevel: strategy.targetLevel.trim(),
+    grade: strategy.grade.trim(),
+    participants: strategy.participants.trim(),
+    phase: strategy.phase.trim(),
+    objective: strategy.objective.trim(),
+    formation: strategy.formation.trim(),
+    roles: strategy.roles.trim(),
+    triggers: strategy.triggers.trim(),
+    steps: strategy.steps.trim(),
+    cautions: strategy.cautions.trim(),
+    commonMistakes: strategy.commonMistakes.trim(),
+    practiceDrill: strategy.practiceDrill.trim(),
   };
 };
 

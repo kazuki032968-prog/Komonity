@@ -1,5 +1,6 @@
 import { COLLECTIONS } from "../constants/app";
 import type {
+  FeedKind,
   FeedPost,
   InteractionRecord,
   PostDetailState,
@@ -11,10 +12,13 @@ import type {
   CommunityPost,
 } from "../types/app";
 
+export const getFeedKindLabel = (feedKind?: FeedKind) =>
+  feedKind === "strategy" ? "戦術" : "メニュー";
+
 export const buildFeedDetail = (post: FeedPost): PostDetailState => ({
   id: post.id,
   source: "feed",
-  sourceLabel: "メニュー・戦術",
+  sourceLabel: getFeedKindLabel(post.feedKind),
   author: post.author,
   authorHandle: post.authorHandle,
   createdByUid: post.createdByUid,
@@ -22,7 +26,9 @@ export const buildFeedDetail = (post: FeedPost): PostDetailState => ({
   title: post.title,
   body: post.body,
   media: post.media,
+  feedKind: post.feedKind ?? "menu",
   practiceMenu: post.practiceMenu,
+  strategyTemplate: post.strategyTemplate,
   replies: post.replies,
   likes: post.likes,
   reposts: post.reposts,
@@ -63,7 +69,6 @@ export const buildCommunityDetail = (item: CommunityPost): PostDetailState => ({
   title: item.title,
   body: item.body,
   media: item.media,
-  practiceMenu: item.practiceMenu,
   replies: item.replies,
   sports: [],
   tags: ["コミュニティ"],

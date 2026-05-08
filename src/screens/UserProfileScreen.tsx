@@ -15,6 +15,7 @@ import type {
   BadgeModalState,
   PostDetailState,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ProfileAnswerItem,
   ProfilePostItem,
   ProfileState,
@@ -85,7 +86,10 @@ export function UserProfileScreen({
   selectedUserBestAnswers: Array<{ question: QuestionPost; bestReply?: Reply }>;
   expandedBodyIds: string[];
   renderCoachProfileDetails: (profile: ProfileState) => ReactNode;
-  renderPracticeMenu: (menu?: PracticeMenuTemplate) => ReactNode;
+  renderPracticeMenu: (
+    menu?: PracticeMenuTemplate,
+    strategy?: PracticeStrategyTemplate
+  ) => ReactNode;
   renderHashtagChips: (tags: string[]) => ReactNode;
   onBack: () => void;
   onToggleFollowProfile: (payload: { targetUid: string; targetName: string }) => void;
@@ -321,7 +325,9 @@ export function UserProfileScreen({
                             title: post.title,
                             body: post.body,
                             media: post.media,
+                            feedKind: post.feedKind,
                             practiceMenu: post.practiceMenu,
+                            strategyTemplate: post.strategyTemplate,
                             replies: post.replies,
                             sports: post.sports,
                             tags: post.tags,
@@ -342,7 +348,7 @@ export function UserProfileScreen({
                           onOpenUrl={onOpenExternalUrl}
                         />
                       ) : null}
-                      {renderPracticeMenu(post.practiceMenu)}
+                      {renderPracticeMenu(post.practiceMenu, post.strategyTemplate)}
                       <MediaGallery media={post.media} compact={true} />
                       {renderHashtagChips(display.tags)}
                     </Pressable>

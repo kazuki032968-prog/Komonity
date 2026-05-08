@@ -7,6 +7,7 @@ import {
   todayMenuConditionOptions,
 } from "../constants/app";
 import {
+  AvatarVisual,
   DefaultAvatarIcon,
   ExpandableBody,
   MediaGallery,
@@ -16,6 +17,7 @@ import {
 import type {
   PostDetailState,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ScreenKey,
   SearchAccountItem,
   SearchContentFilterKey,
@@ -33,6 +35,7 @@ type SearchProfilePayload = {
   role: string;
   bio?: string;
   handle?: string;
+  avatarUrl?: string;
   followers?: string;
   selectedSports?: string[];
   strengths?: string;
@@ -57,7 +60,9 @@ const buildSearchPostDetail = (post: SearchContentItem): PostDetailState => ({
   title: post.title,
   body: post.body,
   media: post.media,
+  feedKind: post.feedKind,
   practiceMenu: post.practiceMenu,
+  strategyTemplate: post.strategyTemplate,
   replies: post.replies,
   sports: post.sports,
   tags: post.tags,
@@ -104,7 +109,10 @@ export function SearchScreen({
   authUserUid?: string;
   currentFollowingUserIds: string[];
   expandedBodyIds: string[];
-  renderPracticeMenu: (menu?: PracticeMenuTemplate) => ReactNode;
+  renderPracticeMenu: (
+    menu?: PracticeMenuTemplate,
+    strategy?: PracticeStrategyTemplate
+  ) => ReactNode;
   renderHashtagChips: (tags: string[]) => ReactNode;
   onBack: () => void;
   onChangeSearchQuery: (value: string) => void;
@@ -183,7 +191,7 @@ export function SearchScreen({
                   />
                 )
               ) : null}
-              {renderPracticeMenu(post.practiceMenu)}
+              {renderPracticeMenu(post.practiceMenu, post.strategyTemplate)}
               <MediaGallery media={post.media} compact={true} />
               {renderHashtagChips(display.tags)}
               {meta.startsWith("最近") ? null : (
@@ -342,6 +350,7 @@ export function SearchScreen({
                 role: account.role,
                 bio: account.bio,
                 handle: account.handle,
+                avatarUrl: account.avatarUrl,
                 followers: account.followers,
                 selectedSports: account.selectedSports,
                 strengths: account.strengths,
@@ -358,7 +367,10 @@ export function SearchScreen({
             return (
               <View key={account.id} style={styles.searchAccountCard}>
                 <Pressable style={styles.searchAvatar} onPress={openAccount}>
-                  <DefaultAvatarIcon size={28} />
+                  <AvatarVisual
+                    size={52}
+                    imageUri={account.avatarUrl}
+                  />
                 </Pressable>
                 <View style={styles.searchAccountBody}>
                   <View style={styles.searchAccountHeader}>

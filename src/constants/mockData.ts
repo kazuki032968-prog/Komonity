@@ -90,6 +90,25 @@ type PracticeMenuSeed = {
   conditionTags: TodayMenuConditionKey[];
 };
 
+type PracticeStrategySeed = {
+  sport: string;
+  title: string;
+  body: string;
+  targetLevel: string;
+  grade: string;
+  participants: string;
+  phase: string;
+  objective: string;
+  formation: string;
+  roles: string;
+  triggers: string;
+  steps: string;
+  cautions: string;
+  commonMistakes: string;
+  practiceDrill: string;
+  tags: string[];
+};
+
 type QuestionSeed = {
   sport: string;
   title: string;
@@ -724,6 +743,329 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
   },
 ];
 
+const practiceStrategySeeds: PracticeStrategySeed[] = [
+  {
+    sport: "サッカー",
+    title: "相手のビルドアップを外へ誘導する守備設計",
+    body:
+      "中央を閉じてサイドへ誘導し、タッチラインを味方にして奪う守備戦術です。ポジションごとの役割を整理すると、初心者が混ざるチームでも連動しやすくなります。",
+    targetLevel: "中級",
+    grade: "中学生〜高校生",
+    participants: "11〜22人",
+    phase: "前線からの守備",
+    objective: "中央突破を防ぎ、サイドで数的優位を作って奪うこと。",
+    formation: "4-4-2を基準に、2トップが相手CBからボランチへの縦パスを消す。",
+    roles: "FWは内側を切る、SHは外へ追い込む、SBは前向きに寄せる、CHはセカンドボールを拾う。",
+    triggers: "相手CBのトラップが外向きになった瞬間、またはバックパスが入った瞬間。",
+    steps:
+      "1. ホワイトボードで誘導方向を確認\n2. 6対6+GKで片側限定の守備を練習\n3. 奪ったら5秒以内にミニゴールへ攻める\n4. 11対11で同じ合図を確認する",
+    cautions: "最初から強く寄せすぎず、パスコースを消してから距離を詰めます。",
+    commonMistakes: "FWが外側から寄せてしまい、中央への縦パスを通されること。",
+    practiceDrill: "ハーフコートで8対8を行い、守備側はサイドで奪った時だけ得点にします。",
+    tags: ["守備戦術", "プレス", "ビルドアップ対策"],
+  },
+  {
+    sport: "野球",
+    title: "無死一塁でバントを使わない進塁設計",
+    body:
+      "ただ送るのではなく、相手内野の守備位置を見てヒットエンドラン、右方向打ち、盗塁を選べるようにします。大会前のケース確認に向いています。",
+    targetLevel: "中級〜大会前",
+    grade: "中学生〜高校生",
+    participants: "9〜20人",
+    phase: "攻撃・走者一塁",
+    objective: "アウトを簡単に渡さず、走者を得点圏へ進める選択肢を増やすこと。",
+    formation: "一塁走者、打者、三塁コーチャー、ベンチがサインを共有する形。",
+    roles: "走者はスタート判断、打者は右方向意識、コーチャーは守備位置と捕手の送球を観察する。",
+    triggers: "二遊間が深い、捕手の送球が不安定、投手のクイックが遅い時。",
+    steps:
+      "1. 守備位置別の選択肢を確認\n2. 走者スタートだけを反復\n3. 打者は逆方向のゴロを狙う\n4. 最後にサインをランダムにして実戦形式にする",
+    cautions: "成功率だけでなく、失敗した時に次の走者・打者が何を学ぶかまで確認します。",
+    commonMistakes: "サインだけを見て、守備位置やカウントを見ないこと。",
+    practiceDrill: "走者一塁から3球勝負を行い、進塁できたら攻撃側に1点を与えます。",
+    tags: ["ケース攻撃", "走塁", "エンドラン"],
+  },
+  {
+    sport: "バスケットボール",
+    title: "ゾーンディフェンスを崩すハイポスト起点",
+    body:
+      "2-3ゾーンに対して、ハイポストにボールを入れて守備の目線を中央へ集めます。外角シュートだけに頼らない攻め方を整理できます。",
+    targetLevel: "中級",
+    grade: "中学生〜高校生",
+    participants: "10〜15人",
+    phase: "ハーフコートオフェンス",
+    objective: "ゾーンの隙間に立ち、ハイポストからショートコーナーとキックアウトを選ぶこと。",
+    formation: "1-3-1気味に配置し、ハイポスト、両ウイング、ショートコーナーを作る。",
+    roles: "ハイポストは受けて前を見る、ウイングは角度を変える、ショートコーナーは背後を狙う。",
+    triggers: "トップの守備がボールへ寄り、ハイポスト前が空いた瞬間。",
+    steps:
+      "1. 立ち位置を確認\n2. ハイポストへのパスだけ反復\n3. 受けた後の3択を確認\n4. 5対5でゾーン相手に実行する",
+    cautions: "ハイポストがボールを止めすぎると守備が戻るため、受ける前に次を見ます。",
+    commonMistakes: "外でパスを回すだけになり、ゾーンの内側にボールが入らないこと。",
+    practiceDrill: "5対5でハイポスト経由の得点を2点扱いにします。",
+    tags: ["ゾーン攻略", "ハイポスト", "判断"],
+  },
+  {
+    sport: "バレーボール",
+    title: "相手エースを避けないサーブターゲット設計",
+    body:
+      "エース以外を狙うだけでなく、相手セッターの移動距離と攻撃枚数を減らす狙い方を整理します。サーブの意図が共有されやすくなります。",
+    targetLevel: "中級",
+    grade: "中学生〜高校生",
+    participants: "6〜18人",
+    phase: "サーブからの守備",
+    objective: "相手の攻撃選択肢を減らし、ブロックとレシーブの準備をしやすくすること。",
+    formation: "サーブターゲット、前衛ブロック、後衛レシーブ位置をセットで決める。",
+    roles: "サーバーは狙いを宣言、ブロッカーは相手セッター位置を見る、後衛は強打コースを消す。",
+    triggers: "相手セッターが前衛、またはレフト攻撃に偏っているローテーション。",
+    steps:
+      "1. 相手ローテを図で確認\n2. サーブターゲットを2箇所決める\n3. ターゲット別の守備位置を確認\n4. 6対6でサーブから始める",
+    cautions: "狙いすぎてミスが増える場合は、ゾーンを広くして安全率を優先します。",
+    commonMistakes: "サーブの狙いと守備位置が連動せず、チャンスボール処理が遅れること。",
+    practiceDrill: "サーブが指定ゾーンに入った時だけラリーを開始します。",
+    tags: ["サーブ戦術", "ローテーション", "守備"],
+  },
+  {
+    sport: "テニス",
+    title: "相手バック側へ展開して浅い球を作る",
+    body:
+      "ただバックを狙うのではなく、深さと高さで相手を下げてから前へ入る戦術です。シングルスのラリー設計として使いやすいです。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "2〜12人",
+    phase: "ラリーからの展開",
+    objective: "相手の弱い側に圧をかけ、浅い返球を作って攻撃に移ること。",
+    formation: "クロスラリーを基準に、深い山なりのボールで相手をコート外へ動かす。",
+    roles: "打つ側は深さを優先、待つ側は浅い球で前へ入る準備をする。",
+    triggers: "相手の打点が低くなった時、または返球がサービスライン付近に落ちた時。",
+    steps:
+      "1. バック側クロスを深く打つ\n2. 浅い返球だけ前へ入る\n3. オープンコートへ決める\n4. ポイント形式で判断を確認する",
+    cautions: "一発で決めようとせず、浅い球を作るまで我慢します。",
+    commonMistakes: "浅くなる前に強打してミスを増やすこと。",
+    practiceDrill: "バック側へ3球続けて入った後だけ攻撃可能にします。",
+    tags: ["ラリー戦術", "バック攻め", "展開"],
+  },
+  {
+    sport: "卓球",
+    title: "短いサーブから3球目攻撃を組み立てる",
+    body:
+      "サーブの回転、相手の返球、3球目のコースをセットで考える戦術です。サーブ練習を得点に直結させやすくなります。",
+    targetLevel: "中級",
+    grade: "中学生〜高校生",
+    participants: "2〜16人",
+    phase: "サーブからの攻撃",
+    objective: "相手の返球を予測し、3球目で先手を取ること。",
+    formation: "フォア前短い下回転、ミドルへの3球目、バック側への展開を基本形にする。",
+    roles: "サーバーは回転量を一定にし、レシーバー役は返球パターンを変える。",
+    triggers: "相手のツッツキが浮いた時、またはミドルに返った時。",
+    steps:
+      "1. サーブの落点を固定\n2. 返球を3種類に限定\n3. 3球目の打点を確認\n4. 5本交代で成功率を記録する",
+    cautions: "サーブ単体ではなく、3球目までを1つのプレーとして扱います。",
+    commonMistakes: "返球を見ずに決め打ちして、低い球を無理に強打すること。",
+    practiceDrill: "3球目攻撃が入ったら2点、ラリー勝利は1点にします。",
+    tags: ["3球目攻撃", "サーブ", "回転"],
+  },
+  {
+    sport: "陸上競技",
+    title: "リレーのバトンゾーンで加速を合わせる",
+    body:
+      "走力差があるメンバーでも、スタートマークと声かけを調整してバトン速度を落とさない戦術です。",
+    targetLevel: "初級〜大会前",
+    grade: "中学生〜高校生",
+    participants: "4〜20人",
+    phase: "リレー・バトンパス",
+    objective: "受け手が加速した状態でバトンを受け、減速を最小化すること。",
+    formation: "渡し手と受け手の走路を固定し、スタートマークを個別に設定する。",
+    roles: "渡し手は声のタイミング、受け手は目線を前に保ち加速する。",
+    triggers: "渡し手が設定マークに到達した瞬間。",
+    steps:
+      "1. ペアごとにマークを置く\n2. 70%速度で合わせる\n3. 90%速度で声のタイミングを確認\n4. 4人通しで記録する",
+    cautions: "手を出すタイミングを早くしすぎず、加速を止めないことを優先します。",
+    commonMistakes: "受け手が後ろを見て減速すること。",
+    practiceDrill: "20m助走+30m加速区間で、通過タイムをペアごとに比較します。",
+    tags: ["リレー", "バトン", "大会前"],
+  },
+  {
+    sport: "水泳",
+    title: "後半に落ちないレース配分を作る",
+    body:
+      "前半から全力で入るのではなく、区間ごとのテンポと呼吸を決めて後半の失速を防ぎます。大会前の調整に使いやすいです。",
+    targetLevel: "中級",
+    grade: "中学生〜高校生",
+    participants: "4〜24人",
+    phase: "レースペース",
+    objective: "前半の余裕と後半の維持を両立し、自己ベストに近い配分を作ること。",
+    formation: "25mまたは50mごとに目標タイムを決め、ペアで記録する。",
+    roles: "泳者はテンポを守る、計測者はラップと主観的きつさを記録する。",
+    triggers: "目標ラップより1秒以上速い時は次区間で抑え、遅い時はキックを増やす。",
+    steps:
+      "1. 目標タイムを区間に分ける\n2. 70%でフォーム確認\n3. 目標ラップで反復\n4. 最後に本番距離で確認する",
+    cautions: "序盤の速さを褒めすぎず、後半まで保てたかを評価します。",
+    commonMistakes: "最初の25mだけ速く、後半でフォームが崩れること。",
+    practiceDrill: "目標ラップとの差が少ないほど得点が高いペース走にします。",
+    tags: ["レース配分", "ペース", "大会前"],
+  },
+  {
+    sport: "バドミントン",
+    title: "奥へ押して前で決める配球パターン",
+    body:
+      "クリアで相手を下げ、返球が浅くなったところをネット前で仕留める戦術です。体力差がある相手にも使いやすい形です。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "2〜16人",
+    phase: "ラリー展開",
+    objective: "相手を前後に動かし、浅い返球を作ること。",
+    formation: "クリア、ドロップ、ヘアピンを同じフォームから打てる位置を作る。",
+    roles: "攻撃側は奥深く、守備側は返球の深さを意識する。",
+    triggers: "相手の返球がサービスライン付近に短くなった時。",
+    steps:
+      "1. 奥へのクリアを3本続ける\n2. 浅い球だけネット前へ落とす\n3. 次球をプッシュで決める\n4. 半面ゲームで使う",
+    cautions: "強打よりも相手を動かす深さを優先します。",
+    commonMistakes: "ドロップが早すぎて相手が前で待てる状態になること。",
+    practiceDrill: "奥に2本入れてから前を使えるルールで半面ゲームを行います。",
+    tags: ["配球", "前後", "ネット前"],
+  },
+  {
+    sport: "吹奏楽",
+    title: "合奏で主旋律を埋もれさせない音量設計",
+    body:
+      "全員が頑張るほど主旋律が聞こえにくくなる問題を、役割別の音量バランスで整理します。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "10〜60人",
+    phase: "合奏・バランス作り",
+    objective: "主旋律、対旋律、伴奏の役割を分け、聞かせたい音を明確にすること。",
+    formation: "主旋律を中心に置き、伴奏は音量を下げてリズムの輪郭を支える。",
+    roles: "主旋律は息の方向、伴奏は発音と長さ、低音は拍の土台を担当する。",
+    triggers: "主旋律が聞こえない、または伴奏が厚くなりすぎた時。",
+    steps:
+      "1. 主旋律だけ演奏\n2. 伴奏だけで音量を決める\n3. 低音を足す\n4. 最後に全体で録音して確認する",
+    cautions: "音量を下げる指示だけでなく、何を聞かせたいかを先に共有します。",
+    commonMistakes: "全パートが同じ強さで吹き、メロディの方向感が消えること。",
+    practiceDrill: "録音を10秒聴き、聞こえた順にパート名を書き出します。",
+    tags: ["合奏", "音量バランス", "主旋律"],
+  },
+  {
+    sport: "合唱",
+    title: "言葉を立てるための子音タイミング設計",
+    body:
+      "音程が合っていても歌詞が伝わらない時に、子音を前へ置く戦術で言葉の輪郭をそろえます。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "8〜60人",
+    phase: "発語・表現",
+    objective: "歌詞の意味と子音のタイミングをそろえ、聞き手に言葉を届けること。",
+    formation: "パートごとに子音を確認し、全体で母音の響きをそろえる。",
+    roles: "各パートリーダーが発語の入りを確認し、指揮者は言葉の山を示す。",
+    triggers: "歌詞がぼやける、フレーズ頭が遅れる、母音だけが伸びる時。",
+    steps:
+      "1. 歌詞をリズム読みする\n2. 子音だけを先に合わせる\n3. 母音を乗せる\n4. 録音して言葉の聞こえ方を確認する",
+    cautions: "子音を強くしすぎて音色が荒れないよう、息の流れを止めません。",
+    commonMistakes: "音程練習だけになり、言葉の意味が後回しになること。",
+    practiceDrill: "重要語だけ丸で囲み、その単語が聞こえたかをペアで確認します。",
+    tags: ["発語", "表現", "合唱"],
+  },
+  {
+    sport: "演劇",
+    title: "台詞の目的語を明確にして会話を動かす",
+    body:
+      "台詞を暗記して読むだけではなく、相手に何をさせたい台詞なのかを確認します。会話のテンポと説得力が上がります。",
+    targetLevel: "初心者〜中級",
+    grade: "中学生〜高校生",
+    participants: "4〜30人",
+    phase: "シーン作り",
+    objective: "台詞ごとの目的を明確にし、相手役への働きかけを強くすること。",
+    formation: "二人組で向かい合い、台詞の前に動詞を設定する。",
+    roles: "話し手は相手を変える、聞き手は変化した反応を返す。",
+    triggers: "台詞が平板、相手を見ずに読んでいる、感情だけで押している時。",
+    steps:
+      "1. 台詞ごとに『止める』『誘う』など動詞を書く\n2. 動詞だけを声に出す\n3. 台詞に戻す\n4. 相手役が受け取れたか確認する",
+    cautions: "感情名ではなく、相手に何をしたいかで考えます。",
+    commonMistakes: "悲しい、怒るなどの感情だけを決めて、相手への目的がないこと。",
+    practiceDrill: "同じ台詞を3つの動詞で演じ分け、見ている人が目的を当てます。",
+    tags: ["台詞", "シーン作り", "表現"],
+  },
+  {
+    sport: "美術",
+    title: "画面の視線誘導を作る構図設計",
+    body:
+      "描き込み量ではなく、どこから見てほしいかを先に決める戦術です。ポスター制作やデッサン講評に使いやすいです。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "5〜40人",
+    phase: "構図・鑑賞",
+    objective: "見る順番を意図して、伝えたい主題が届く画面を作ること。",
+    formation: "主役、準主役、余白の3要素で画面を分ける。",
+    roles: "作者は視線の入口と出口を決め、鑑賞者は実際に目が動いた順を伝える。",
+    triggers: "画面全体が同じ強さで、何を見ればよいか分からない時。",
+    steps:
+      "1. 作品を3秒だけ見る\n2. 最初に見た場所を共有\n3. 主役の明度と大きさを調整\n4. 余白で視線の流れを作る",
+    cautions: "細部の描き込み前に、遠目で見た時の強弱を確認します。",
+    commonMistakes: "全部を丁寧に描き、結果的に主役が弱くなること。",
+    practiceDrill: "サムネイルを3案作り、どれが一番主題へ目が行くか投票します。",
+    tags: ["構図", "視線誘導", "鑑賞"],
+  },
+  {
+    sport: "書道",
+    title: "余白で作品の重心を整える配置戦術",
+    body:
+      "文字の上手さだけでなく、紙面のどこに重さを置くかを意識します。作品づくり前の構成確認に向いています。",
+    targetLevel: "初級〜中級",
+    grade: "中学生〜高校生",
+    participants: "5〜40人",
+    phase: "作品構成",
+    objective: "文字の大きさ、行間、余白で見やすい重心を作ること。",
+    formation: "半紙を上下左右に分け、中心線と余白の量を確認する。",
+    roles: "書き手は重心を決め、ペアは余白の偏りを客観的に見る。",
+    triggers: "作品が右下へ落ちて見える、行間が詰まる、最後の文字が窮屈な時。",
+    steps:
+      "1. 薄い紙で配置を試す\n2. 大きい文字と小さい文字を決める\n3. 余白を確認して清書\n4. 離れて見て重心を確認する",
+    cautions: "一文字ずつ直す前に、紙全体の見え方を確認します。",
+    commonMistakes: "最初の文字を大きくしすぎて、最後が詰まること。",
+    practiceDrill: "同じ語を3種類の配置で書き、最も読みやすいものを選びます。",
+    tags: ["余白", "作品構成", "重心"],
+  },
+  {
+    sport: "科学",
+    title: "仮説から変数を分ける実験計画",
+    body:
+      "面白そうな実験で終わらせず、何を変えて何を測るかを明確にします。探究活動の入口に向いています。",
+    targetLevel: "初心者〜中級",
+    grade: "中学生〜高校生",
+    participants: "3〜40人",
+    phase: "探究・実験設計",
+    objective: "独立変数、従属変数、統制条件を分けて、検証できる計画にすること。",
+    formation: "班ごとに仮説カード、変える条件カード、測る項目カードを並べる。",
+    roles: "記録係は条件、実験係は手順、発表係は仮説との関係を説明する。",
+    triggers: "仮説が大きすぎる、条件を一度に複数変えようとしている時。",
+    steps:
+      "1. 疑問を一文にする\n2. 変える条件を1つに絞る\n3. 測る数値を決める\n4. そろえる条件を書き出す",
+    cautions: "結果が派手かどうかより、比べられる形になっているかを優先します。",
+    commonMistakes: "条件を複数変えて、何が結果に影響したか分からなくなること。",
+    practiceDrill: "身近な疑問を3枚のカードに分解し、班同士で計画をチェックします。",
+    tags: ["探究", "実験計画", "変数"],
+  },
+  {
+    sport: "ロボット",
+    title: "速度より再現性を優先する走行戦術",
+    body:
+      "大会コースで速さだけを追う前に、センサー値と曲がり方の再現性を高めます。安定して完走するための戦術です。",
+    targetLevel: "初級〜大会前",
+    grade: "中学生〜高校生",
+    participants: "2〜20人",
+    phase: "大会走行",
+    objective: "速度、センサー閾値、カーブ進入角度を安定させ、完走率を上げること。",
+    formation: "直線、緩カーブ、急カーブを区間に分けて調整する。",
+    roles: "操作係は設定変更、記録係は成功率、観察係は外れた位置を記録する。",
+    triggers: "同じ場所で2回以上コースアウトする、または光量で動きが変わる時。",
+    steps:
+      "1. 区間ごとに成功率を記録\n2. 速度を固定して閾値を調整\n3. カーブだけ別練習\n4. 通し走行で成功率を見る",
+    cautions: "一度に速度と閾値を変えず、変更理由をログに残します。",
+    commonMistakes: "失敗直後に複数設定を変えて、改善理由が分からなくなること。",
+    practiceDrill: "3回連続成功した区間だけ次の速度へ上げるルールで練習します。",
+    tags: ["走行戦術", "再現性", "大会前"],
+  },
+];
+
 const questionSeeds: QuestionSeed[] = [
   {
     sport: "サッカー",
@@ -815,7 +1157,7 @@ const communitySeeds: CommunitySeed[] = [
 ];
 
 const mockStartTime = Date.UTC(2026, 3, 21, 8, 13, 27);
-const mockEndTime = Date.UTC(2026, 4, 10, 14, 46, 38);
+const mockEndTime = Date.UTC(2026, 4, 31, 21, 42, 17);
 
 const pick = <T,>(items: readonly T[], index: number) => items[index % items.length];
 const pad = (value: number) => String(value).padStart(3, "0");
@@ -954,7 +1296,7 @@ export const mockDirectoryMetaMap: Record<string, UserDirectoryMeta> =
     return accumulator;
   }, {});
 
-export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) => {
+const mockMenuFeedPosts: FeedPost[] = Array.from({ length: 190 }, (_, index) => {
   const seed = pick(practiceMenuSeeds, index);
   const coach = pickCoachForSport(seed.sport, index);
   const advisor = pickAdvisorForSport(seed.sport, index);
@@ -962,7 +1304,7 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
   const naturalTags = Array.from(new Set([seed.sport, ...seed.tags]));
 
   return {
-    id: `mock-feed-${pad(index + 1)}`,
+    id: `mock-menu-${pad(index + 1)}`,
     author: coach.name,
     authorHandle: coach.handle,
     createdByUid: coach.id,
@@ -976,7 +1318,7 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
     comments: 1 + ((index * 5) % 24),
     replies: [
       {
-        id: `mock-feed-${index + 1}-reply-1`,
+        id: `mock-menu-${index + 1}-reply-1`,
         author: advisor.name,
         authorHandle: advisor.handle,
         createdByUid: advisor.id,
@@ -984,6 +1326,7 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
         replies: [],
       },
     ],
+    feedKind: "menu",
     practiceMenu: {
       sport: seed.sport,
       targetLevel: seed.targetLevel,
@@ -998,9 +1341,63 @@ export const mockFeedPosts: FeedPost[] = Array.from({ length: 180 }, (_, index) 
       arrangements: seed.arrangements,
       conditionTags: seed.conditionTags,
     },
-    createdAtMs: createMockTimestamp(index, 180),
+    createdAtMs: createMockTimestamp(index, 190),
   };
 });
+
+const mockStrategyFeedPosts: FeedPost[] = Array.from({ length: 150 }, (_, index) => {
+  const seed = pick(practiceStrategySeeds, index);
+  const coach = pickCoachForSport(seed.sport, index * 2);
+  const advisor = pickAdvisorForSport(seed.sport, index + 11);
+  const naturalTags = Array.from(new Set([seed.sport, ...seed.tags]));
+
+  return {
+    id: `mock-strategy-${pad(index + 1)}`,
+    author: coach.name,
+    authorHandle: coach.handle,
+    createdByUid: coach.id,
+    role: coach.role,
+    title: seed.title,
+    body: `${seed.body}\n\n戦術の狙い: ${seed.objective}\n#${seed.sport} #${seed.tags[0]} #部活戦術`,
+    tags: naturalTags,
+    sports: [seed.sport],
+    likes: 6 + ((index * 19) % 210),
+    reposts: 1 + ((index * 11) % 74),
+    comments: 1 + ((index * 7) % 28),
+    replies: [
+      {
+        id: `mock-strategy-${index + 1}-reply-1`,
+        author: advisor.name,
+        authorHandle: advisor.handle,
+        createdByUid: advisor.id,
+        body: `${seed.sport}の試合前確認に使いやすいです。合図と役割を先に決める流れを参考にします。`,
+        replies: [],
+      },
+    ],
+    feedKind: "strategy",
+    strategyTemplate: {
+      sport: seed.sport,
+      targetLevel: seed.targetLevel,
+      grade: seed.grade,
+      participants: seed.participants,
+      phase: seed.phase,
+      objective: seed.objective,
+      formation: seed.formation,
+      roles: seed.roles,
+      triggers: seed.triggers,
+      steps: seed.steps,
+      cautions: seed.cautions,
+      commonMistakes: seed.commonMistakes,
+      practiceDrill: seed.practiceDrill,
+    },
+    createdAtMs: createMockTimestamp(index, 150, 17),
+  };
+});
+
+export const mockFeedPosts: FeedPost[] = [
+  ...mockMenuFeedPosts,
+  ...mockStrategyFeedPosts,
+].sort((first, second) => (second.createdAtMs ?? 0) - (first.createdAtMs ?? 0));
 
 export const mockQuestionPosts: QuestionPost[] = Array.from({ length: 96 }, (_, index) => {
   const seed = pick(questionSeeds, index);

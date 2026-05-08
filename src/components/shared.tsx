@@ -863,6 +863,7 @@ export function AvatarVisual({
     return (
       <Image
         source={{ uri: imageUri }}
+        resizeMode="cover"
         style={{
           width: size,
           height: size,

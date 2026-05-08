@@ -166,7 +166,9 @@ export type FeedPost = {
   comments: number;
   replies: Reply[];
   media?: MediaAttachment[];
+  feedKind?: FeedKind;
   practiceMenu?: PracticeMenuTemplate;
+  strategyTemplate?: PracticeStrategyTemplate;
   createdByUid?: string;
   authorHandle?: string;
   createdAtMs?: number;
@@ -232,6 +234,7 @@ export type InteractionRecord = {
 };
 
 export type ComposeTarget = "feed" | "questions" | "community";
+export type FeedKind = "menu" | "strategy";
 
 export type TodayMenuConditionKey =
   | "under60"
@@ -256,12 +259,30 @@ export type PracticeMenuTemplate = {
   conditionTags: TodayMenuConditionKey[];
 };
 
+export type PracticeStrategyTemplate = {
+  sport: string;
+  targetLevel: string;
+  grade: string;
+  participants: string;
+  phase: string;
+  objective: string;
+  formation: string;
+  roles: string;
+  triggers: string;
+  steps: string;
+  cautions: string;
+  commonMistakes: string;
+  practiceDrill: string;
+};
+
 export type ComposeState = {
   target: ComposeTarget;
+  feedKind: FeedKind;
   title: string;
   body: string;
   selectedSports: string[];
   practiceMenu: PracticeMenuTemplate;
+  strategyTemplate: PracticeStrategyTemplate;
 };
 
 export type SearchContentItem = {
@@ -278,7 +299,9 @@ export type SearchContentItem = {
   tags: string[];
   replies: Reply[];
   media?: MediaAttachment[];
+  feedKind?: FeedKind;
   practiceMenu?: PracticeMenuTemplate;
+  strategyTemplate?: PracticeStrategyTemplate;
   score: number;
   createdAtMs?: number;
 };
@@ -330,7 +353,9 @@ export type PostDetailState = {
   title: string;
   body: string;
   media?: MediaAttachment[];
+  feedKind?: FeedKind;
   practiceMenu?: PracticeMenuTemplate;
+  strategyTemplate?: PracticeStrategyTemplate;
   replies: Reply[];
   likes?: number;
   reposts?: number;

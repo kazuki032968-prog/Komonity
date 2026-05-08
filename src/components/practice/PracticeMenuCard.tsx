@@ -2,7 +2,10 @@ import { Text, View } from "react-native";
 
 import { todayMenuConditionOptions } from "../../constants/app";
 import { sharedStyles } from "../../styles/shared";
-import type { PracticeMenuTemplate } from "../../types/app";
+import type {
+  PracticeMenuTemplate,
+  PracticeStrategyTemplate,
+} from "../../types/app";
 
 type SharedStyles = Record<string, any>;
 
@@ -66,6 +69,58 @@ export function PracticeMenuCard({
           })}
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * 戦術テンプレートを、局面・役割・判断基準が追いやすいカードとして表示します。
+ */
+export function PracticeStrategyCard({
+  strategy,
+  variant = "summary",
+  styles = sharedStyles,
+}: {
+  strategy?: PracticeStrategyTemplate;
+  variant?: "summary" | "detail";
+  styles?: SharedStyles;
+}) {
+  if (!strategy) {
+    return null;
+  }
+
+  const rows = [
+    ["対象レベル", strategy.targetLevel],
+    ["学年", strategy.grade],
+    ["人数", strategy.participants],
+    ["局面", strategy.phase],
+    ["目的", strategy.objective],
+    ["配置・形", strategy.formation],
+    ["役割", strategy.roles],
+    ["判断基準", strategy.triggers],
+    ["実行手順", strategy.steps],
+    ["注意点", strategy.cautions],
+    ["よくある失敗", strategy.commonMistakes],
+    ["練習への落とし込み", strategy.practiceDrill],
+  ].filter(([, value]) => value);
+  const visibleRows = variant === "summary" ? rows.slice(0, 5) : rows;
+
+  return (
+    <View style={styles.practiceMenuBox}>
+      <View style={styles.practiceMenuHeader}>
+        <Text style={styles.practiceMenuTitle}>戦術テンプレート</Text>
+        {strategy.sport ? (
+          <View style={styles.searchSourceBadge}>
+            <Text style={styles.searchSourceBadgeText}>{strategy.sport}</Text>
+          </View>
+        ) : null}
+      </View>
+      {visibleRows.map(([label, value]) => (
+        <View key={label} style={styles.practiceMenuRow}>
+          <Text style={styles.practiceMenuLabel}>{label}</Text>
+          <Text style={styles.practiceMenuValue}>{value}</Text>
+        </View>
+      ))}
     </View>
   );
 }

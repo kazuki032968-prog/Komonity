@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { User } from "firebase/auth";
 
 import {
+  AvatarVisual,
   DefaultAvatarIcon,
   ExpandableBody,
   MediaGallery,
@@ -39,6 +40,7 @@ type OpenProfilePayload = {
   role: string;
   bio?: string;
   handle?: string;
+  avatarUrl?: string;
   followers?: string;
   selectedSports?: string[];
 };
@@ -182,13 +184,17 @@ export function ExpertsScreen({
                     role: "指導員アカウント",
                     bio: coach.bio,
                     handle: coach.handle,
+                    avatarUrl: coach.avatarUrl,
                     followers: coach.followers,
                     selectedSports: coach.selectedSports,
                   })
                 }
               >
                 <View style={styles.authorAvatar}>
-                  <DefaultAvatarIcon size={28} />
+                  <AvatarVisual
+                    size={56}
+                    imageUri={coach.avatarUrl}
+                  />
                 </View>
                 <View style={styles.authorTextBlock}>
                   <Text style={styles.cardTitle}>{coach.name}</Text>
@@ -559,6 +565,7 @@ export function RelationshipListScreen({
               role: account.role,
               bio: account.bio,
               handle: account.handle,
+              avatarUrl: account.avatarUrl,
               followers: account.followers,
               selectedSports: account.selectedSports,
             });
@@ -566,7 +573,10 @@ export function RelationshipListScreen({
           return (
             <View key={account.id} style={styles.searchAccountCard}>
               <Pressable style={styles.searchAvatar} onPress={openAccount}>
-                <DefaultAvatarIcon size={28} />
+                <AvatarVisual
+                  size={52}
+                  imageUri={account.avatarUrl}
+                />
               </Pressable>
               <View style={styles.searchAccountBody}>
                 <View style={styles.searchAccountHeader}>

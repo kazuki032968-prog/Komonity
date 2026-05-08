@@ -10,6 +10,7 @@ import type {
   LoginFormState,
   PostDetailState,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ProfileState,
   QuestionPost,
   ReplyDetailState,
@@ -289,6 +290,35 @@ export const initialPracticeMenu: PracticeMenuTemplate = {
   conditionTags: [],
 };
 
+export const initialPracticeStrategy: PracticeStrategyTemplate = {
+  sport: "",
+  targetLevel: "",
+  grade: "",
+  participants: "",
+  phase: "",
+  objective: "",
+  formation: "",
+  roles: "",
+  triggers: "",
+  steps: "",
+  cautions: "",
+  commonMistakes: "",
+  practiceDrill: "",
+};
+
+export const feedKindOptions = [
+  {
+    key: "menu",
+    label: "メニュー",
+    description: "練習時間・道具・手順まで、そのまま現場で使える形で投稿します。",
+  },
+  {
+    key: "strategy",
+    label: "戦術",
+    description: "試合の局面、役割、判断基準、練習への落とし込みを投稿します。",
+  },
+] as const;
+
 export const practiceLevelOptions = ["初心者", "初級", "中級", "上級", "大会前"] as const;
 
 export const schoolGradeOptions = [
@@ -317,10 +347,12 @@ export const todayMenuConditionOptions: Array<{
 
 export const initialComposeState: ComposeState = {
   target: "feed",
+  feedKind: "menu",
   title: "",
   body: "",
   selectedSports: [],
   practiceMenu: initialPracticeMenu,
+  strategyTemplate: initialPracticeStrategy,
 };
 
 export const INITIAL_SELECTION: TextSelectionRange = {
@@ -339,6 +371,7 @@ export const initialPostDetailState: PostDetailState = {
   title: "",
   body: "",
   media: [],
+  feedKind: "menu",
   replies: [],
   likes: 0,
   reposts: 0,

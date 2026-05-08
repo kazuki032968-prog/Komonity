@@ -11,6 +11,7 @@ import {
 import {
   POST_BODY_MAX_LENGTH,
   POST_TITLE_MAX_LENGTH,
+  feedKindOptions,
   practiceLevelOptions,
   schoolGradeOptions,
   todayMenuConditionOptions,
@@ -19,6 +20,7 @@ import type {
   ComposeState,
   LocalMediaAsset,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ProfileState,
   TextSelectionRange,
   TodayMenuConditionKey,
@@ -45,6 +47,7 @@ export function PostComposeScreen({
   onGoToLogin,
   onUpdateComposeState,
   onUpdatePracticeMenuField,
+  onUpdatePracticeStrategyField,
   onToggleComposeSport,
   onTogglePracticeMenuCondition,
   onApplyComposeFormatting,
@@ -64,12 +67,16 @@ export function PostComposeScreen({
   isPublishing: boolean;
   onGoToRegister: () => void;
   onGoToLogin: () => void;
-  onUpdateComposeState: <K extends Exclude<keyof ComposeState, "selectedSports">>(
-    key: K,
+  onUpdateComposeState: (
+    key: "target" | "feedKind" | "title" | "body",
     value: string
   ) => void;
   onUpdatePracticeMenuField: (
     key: Exclude<keyof PracticeMenuTemplate, "conditionTags">,
+    value: string
+  ) => void;
+  onUpdatePracticeStrategyField: (
+    key: keyof PracticeStrategyTemplate,
     value: string
   ) => void;
   onToggleComposeSport: (sport: string) => void;
@@ -204,6 +211,48 @@ export function PostComposeScreen({
               </View>
             ) : null}
             {isCoachPostingFeed ? (
+              <View style={styles.formGroup}>
+                <View style={styles.formLabelRow}>
+                  <Text style={styles.formLabel}>投稿タイプ</Text>
+                  <Text style={styles.formDetail}>必須</Text>
+                </View>
+                <Text style={styles.fieldSupport}>
+                  練習メニューと戦術を分けることで、顧問の先生が目的に合った投稿を探しやすくなります。
+                </Text>
+                <View style={styles.postTargetRow}>
+                  {feedKindOptions.map((option) => {
+                    const active = composeState.feedKind === option.key;
+                    return (
+                      <Pressable
+                        key={option.key}
+                        style={[
+                          styles.postTargetChip,
+                          active && styles.postTargetChipActive,
+                        ]}
+                        onPress={() => onUpdateComposeState("feedKind", option.key)}
+                      >
+                        <Text
+                          style={[
+                            styles.postTargetChipText,
+                            active && styles.postTargetChipTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={styles.fieldSupport}>
+                  {
+                    feedKindOptions.find(
+                      (option) => option.key === composeState.feedKind
+                    )?.description
+                  }
+                </Text>
+              </View>
+            ) : null}
+            {isCoachPostingFeed && composeState.feedKind === "menu" ? (
               <View style={styles.practiceTemplateCard}>
                 <View style={styles.formLabelRow}>
                   <Text style={styles.formLabel}>練習メニュー投稿テンプレ</Text>
@@ -401,6 +450,205 @@ export function PostComposeScreen({
                     })}
                   </View>
                 </View>
+              </View>
+            ) : null}
+            {isCoachPostingFeed && composeState.feedKind === "strategy" ? (
+              <View style={styles.practiceTemplateCard}>
+                <View style={styles.formLabelRow}>
+                  <Text style={styles.formLabel}>戦術投稿テンプレ</Text>
+                  <Text style={styles.formDetail}>必須</Text>
+                </View>
+                <Text style={styles.fieldSupport}>
+                  試合で使う局面、配置、役割、判断基準を型として残します。
+                </Text>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>種目</Text>
+                  <View style={styles.sportChipRow}>
+                    {profileState.selectedSports.map((sport) => {
+                      const selected = composeState.strategyTemplate.sport === sport;
+                      return (
+                        <Pressable
+                          key={sport}
+                          style={[
+                            styles.postTargetChip,
+                            selected && styles.postTargetChipActive,
+                          ]}
+                          onPress={() =>
+                            onUpdatePracticeStrategyField("sport", sport)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.postTargetChipText,
+                              selected && styles.postTargetChipTextActive,
+                            ]}
+                          >
+                            {sport}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>対象レベル</Text>
+                  <View style={styles.sportChipRow}>
+                    {practiceLevelOptions.map((level) => {
+                      const selected =
+                        composeState.strategyTemplate.targetLevel === level;
+                      return (
+                        <Pressable
+                          key={level}
+                          style={[
+                            styles.postTargetChip,
+                            selected && styles.postTargetChipActive,
+                          ]}
+                          onPress={() =>
+                            onUpdatePracticeStrategyField("targetLevel", level)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.postTargetChipText,
+                              selected && styles.postTargetChipTextActive,
+                            ]}
+                          >
+                            {level}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>学年</Text>
+                  <View style={styles.sportChipRow}>
+                    {schoolGradeOptions.map((grade) => {
+                      const selected = composeState.strategyTemplate.grade === grade;
+                      return (
+                        <Pressable
+                          key={grade}
+                          style={[
+                            styles.postTargetChip,
+                            selected && styles.postTargetChipActive,
+                          ]}
+                          onPress={() =>
+                            onUpdatePracticeStrategyField("grade", grade)
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.postTargetChipText,
+                              selected && styles.postTargetChipTextActive,
+                            ]}
+                          >
+                            {grade}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                <FormField
+                  label="人数"
+                  detail="必須"
+                  placeholder="例: 11人 / 5人 / パート全体"
+                  multiline={false}
+                  value={composeState.strategyTemplate.participants}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("participants", value)
+                  }
+                />
+                <FormField
+                  label="局面"
+                  detail="必須"
+                  placeholder="例: 攻撃の組み立て / 守備の切り替え / 本番前の入り"
+                  multiline={false}
+                  value={composeState.strategyTemplate.phase}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("phase", value)
+                  }
+                />
+                <FormField
+                  label="戦術の目的"
+                  detail="必須"
+                  placeholder="例: 相手の中央突破を防ぎ、サイドへ誘導する"
+                  multiline={true}
+                  value={composeState.strategyTemplate.objective}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("objective", value)
+                  }
+                />
+                <FormField
+                  label="配置・形"
+                  detail="必須"
+                  placeholder="例: 4-4-2 / 2-3ゾーン / 前列3枚で幅を取る"
+                  multiline={true}
+                  value={composeState.strategyTemplate.formation}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("formation", value)
+                  }
+                />
+                <FormField
+                  label="役割"
+                  detail="必須"
+                  placeholder="例: 1列目は外切り、2列目は縦パスを消す"
+                  multiline={true}
+                  value={composeState.strategyTemplate.roles}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("roles", value)
+                  }
+                />
+                <FormField
+                  label="判断基準"
+                  detail="必須"
+                  placeholder="例: 相手の体の向きが外を向いたらプレスを開始"
+                  multiline={true}
+                  value={composeState.strategyTemplate.triggers}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("triggers", value)
+                  }
+                />
+                <FormField
+                  label="実行手順"
+                  detail="必須"
+                  placeholder="例: 1. 合図を決める 2. 役割を確認する 3. 実戦で試す"
+                  multiline={true}
+                  value={composeState.strategyTemplate.steps}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("steps", value)
+                  }
+                />
+                <FormField
+                  label="注意点"
+                  detail="必須"
+                  placeholder="例: 全員が同時に動くより、最初の一人の合図を明確にする"
+                  multiline={true}
+                  value={composeState.strategyTemplate.cautions}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("cautions", value)
+                  }
+                />
+                <FormField
+                  label="よくある失敗"
+                  detail="必須"
+                  placeholder="例: ボールだけを見て、背後のスペースを空けてしまう"
+                  multiline={true}
+                  value={composeState.strategyTemplate.commonMistakes}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("commonMistakes", value)
+                  }
+                />
+                <FormField
+                  label="練習への落とし込み"
+                  detail="必須"
+                  placeholder="例: 半面ゲームで条件を付け、成功基準を可視化する"
+                  multiline={true}
+                  value={composeState.strategyTemplate.practiceDrill}
+                  onChangeText={(value) =>
+                    onUpdatePracticeStrategyField("practiceDrill", value)
+                  }
+                />
               </View>
             ) : null}
             <View style={styles.formGroup}>

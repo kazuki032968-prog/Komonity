@@ -5,6 +5,7 @@ import {
   Platform,
   Pressable,
   Text,
+  useColorScheme,
   View,
 } from "react-native";
 import {
@@ -89,18 +90,24 @@ import {
 } from "./src/services/profileService";
 import {
   normalizeMedia,
+  normalizeFeedKind,
   normalizePracticeMenu,
+  normalizePracticeStrategy,
   normalizeReplies,
   toArrayOfStrings,
   serializePracticeMenuForFirestore,
+  serializePracticeStrategyForFirestore,
   serializeRepliesForFirestore,
 } from "./src/services/serializers";
 import { resolveScreenPath } from "./src/navigation/routes";
 import { buildSeoMeta } from "./src/navigation/seo";
 import { AppRouter } from "./src/navigation/AppRouter";
-import { PracticeMenuCard } from "./src/components/practice/PracticeMenuCard";
+import {
+  PracticeMenuCard,
+  PracticeStrategyCard,
+} from "./src/components/practice/PracticeMenuCard";
 import { CoachProfileDetails } from "./src/components/profile/CoachProfileDetails";
-import { styles } from "./src/styles/appStyles";
+import { darkStyles, styles as lightStyles } from "./src/styles/appStyles";
 import {
   collectReplyMediaUrls,
   deleteOwnedPostsAndMedia as deleteOwnedPostsAndMediaFromFirestore,
@@ -137,6 +144,7 @@ import type {
   PostAlertRecord,
   PostDetailState,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ProfileTabKey,
   ProfileAnswerItem,
   ProfilePostItem,
@@ -207,6 +215,9 @@ const isMockAccount = (accountId?: string) =>
   typeof accountId === "string" && accountId.startsWith("mock-");
 
 export default function App() {
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
+  const styles = isDarkMode ? darkStyles : lightStyles;
   const isHandlingBrowserNavigation = useRef(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenKey>("top");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -766,7 +777,9 @@ export default function App() {
           comments: typeof data.comments === "number" ? data.comments : 0,
           replies: normalizeReplies(data.replies),
           media: normalizeMedia(data.media),
+          feedKind: normalizeFeedKind(data.feedKind),
           practiceMenu: normalizePracticeMenu(data.practiceMenu),
+          strategyTemplate: normalizePracticeStrategy(data.strategyTemplate),
           createdAtMs: toTimestampMs(data.createdAt),
           isDeleted: data.isDeleted === true,
         }];
@@ -984,8 +997,25 @@ export default function App() {
 
   const renderPracticeMenu = (
     menu?: PracticeMenuTemplate,
-    variant: "summary" | "detail" = "summary"
-  ) => <PracticeMenuCard menu={menu} variant={variant} styles={styles} />;
+    strategyOrVariant?: PracticeStrategyTemplate | "summary" | "detail",
+    maybeVariant: "summary" | "detail" = "summary"
+  ) => {
+    const strategy =
+      typeof strategyOrVariant === "object" ? strategyOrVariant : undefined;
+    const variant =
+      typeof strategyOrVariant === "string" ? strategyOrVariant : maybeVariant;
+
+    return (
+      <>
+        <PracticeMenuCard menu={menu} variant={variant} styles={styles} />
+        <PracticeStrategyCard
+          strategy={strategy}
+          variant={variant}
+          styles={styles}
+        />
+      </>
+    );
+  };
 
   const renderCoachProfileDetails = (profile: ProfileState) => (
     <CoachProfileDetails
@@ -1905,7 +1935,7 @@ export default function App() {
       createdAtMs: post.createdAtMs,
       id: post.id,
       source: "feed" as const,
-      sourceLabel: "メニュー・戦術",
+      sourceLabel: post.feedKind === "strategy" ? "戦術" : "メニュー",
       author: post.author,
       authorHandle: post.authorHandle,
       createdByUid: post.createdByUid,
@@ -1916,7 +1946,9 @@ export default function App() {
       tags: post.tags,
       replies: post.replies,
       media: post.media,
+      feedKind: post.feedKind ?? "menu",
       practiceMenu: post.practiceMenu,
+      strategyTemplate: post.strategyTemplate,
       score: getTrendingScore({
         source: "feed",
         baseScore: post.likes + post.reposts * 2 + post.comments,
@@ -2710,7 +2742,7 @@ export default function App() {
       return true;
     }
 
-    if (item.source !== "feed" || !item.practiceMenu) {
+    if (item.source !== "feed" || item.feedKind === "strategy" || !item.practiceMenu) {
       return false;
     }
 
@@ -2799,6 +2831,19 @@ export default function App() {
       item.practiceMenu?.cautions,
       item.practiceMenu?.commonMistakes,
       item.practiceMenu?.arrangements,
+      item.strategyTemplate?.sport,
+      item.strategyTemplate?.targetLevel,
+      item.strategyTemplate?.grade,
+      item.strategyTemplate?.participants,
+      item.strategyTemplate?.phase,
+      item.strategyTemplate?.objective,
+      item.strategyTemplate?.formation,
+      item.strategyTemplate?.roles,
+      item.strategyTemplate?.triggers,
+      item.strategyTemplate?.steps,
+      item.strategyTemplate?.cautions,
+      item.strategyTemplate?.commonMistakes,
+      item.strategyTemplate?.practiceDrill,
       ...item.tags,
       ...item.sports,
     ]
@@ -3321,7 +3366,7 @@ export default function App() {
   };
 
   const updateComposeState = (
-    key: Exclude<keyof ComposeState, "selectedSports">,
+    key: "target" | "feedKind" | "title" | "body",
     value: string
   ) => {
     setComposeState((current) => ({ ...current, [key]: value }));
@@ -3338,6 +3383,14 @@ export default function App() {
         sport:
           current.practiceMenu.sport ||
           (!current.selectedSports.includes(sport) ? sport : current.practiceMenu.sport),
+      },
+      strategyTemplate: {
+        ...current.strategyTemplate,
+        sport:
+          current.strategyTemplate.sport ||
+          (!current.selectedSports.includes(sport)
+            ? sport
+            : current.strategyTemplate.sport),
       },
     }));
   };
@@ -3363,6 +3416,19 @@ export default function App() {
         conditionTags: current.practiceMenu.conditionTags.includes(key)
           ? current.practiceMenu.conditionTags.filter((item) => item !== key)
           : [...current.practiceMenu.conditionTags, key],
+      },
+    }));
+  };
+
+  const updatePracticeStrategyField = (
+    key: keyof PracticeStrategyTemplate,
+    value: string
+  ) => {
+    setComposeState((current) => ({
+      ...current,
+      strategyTemplate: {
+        ...current.strategyTemplate,
+        [key]: value,
       },
     }));
   };
@@ -3418,6 +3484,7 @@ export default function App() {
     role,
     bio,
     handle,
+    avatarUrl,
     selectedSports,
     followers,
     strengths,
@@ -3436,6 +3503,7 @@ export default function App() {
     role: string;
     bio?: string;
     handle?: string;
+    avatarUrl?: string;
     selectedSports?: string[];
     followers?: string;
     strengths?: string;
@@ -3469,7 +3537,7 @@ export default function App() {
       bio: bio ?? "",
       link: buildProfileUrl(handle ?? createHandleFromName(name)),
       externalLinks: uid ? directoryMetaMap[uid]?.externalLinks ?? [] : [],
-      avatarUrl: uid ? directoryMetaMap[uid]?.iconUrl ?? "" : "",
+      avatarUrl: uid ? directoryMetaMap[uid]?.iconUrl ?? avatarUrl ?? "" : avatarUrl ?? "",
       coverUrl: uid ? directoryMetaMap[uid]?.coverUrl ?? "" : "",
       joined: "2026年4月からKomonityを利用",
       following:
@@ -4169,22 +4237,42 @@ export default function App() {
     }
 
     if (profileState.role.includes("指導員") && composeState.target === "feed") {
-      const menu = composeState.practiceMenu;
-      const requiredPracticeFields = [
-        menu.sport,
-        menu.targetLevel,
-        menu.grade,
-        menu.participants,
-        menu.durationMinutes,
-        menu.tools,
-        menu.purpose,
-        menu.steps,
-        menu.cautions,
-        menu.commonMistakes,
-        menu.arrangements,
-      ];
-      if (requiredPracticeFields.some((value) => !value.trim())) {
-        setAuthError("練習メニュー投稿テンプレの項目をすべて入力してください。");
+      const requiredTemplateFields =
+        composeState.feedKind === "strategy"
+          ? [
+              composeState.strategyTemplate.sport,
+              composeState.strategyTemplate.targetLevel,
+              composeState.strategyTemplate.grade,
+              composeState.strategyTemplate.participants,
+              composeState.strategyTemplate.phase,
+              composeState.strategyTemplate.objective,
+              composeState.strategyTemplate.formation,
+              composeState.strategyTemplate.roles,
+              composeState.strategyTemplate.triggers,
+              composeState.strategyTemplate.steps,
+              composeState.strategyTemplate.cautions,
+              composeState.strategyTemplate.commonMistakes,
+              composeState.strategyTemplate.practiceDrill,
+            ]
+          : [
+              composeState.practiceMenu.sport,
+              composeState.practiceMenu.targetLevel,
+              composeState.practiceMenu.grade,
+              composeState.practiceMenu.participants,
+              composeState.practiceMenu.durationMinutes,
+              composeState.practiceMenu.tools,
+              composeState.practiceMenu.purpose,
+              composeState.practiceMenu.steps,
+              composeState.practiceMenu.cautions,
+              composeState.practiceMenu.commonMistakes,
+              composeState.practiceMenu.arrangements,
+            ];
+      if (requiredTemplateFields.some((value) => !value.trim())) {
+        setAuthError(
+          composeState.feedKind === "strategy"
+            ? "戦術投稿テンプレの項目をすべて入力してください。"
+            : "練習メニュー投稿テンプレの項目をすべて入力してください。"
+        );
         return;
       }
     }
@@ -4216,7 +4304,15 @@ export default function App() {
           comments: 0,
           replies: [],
           media: uploadedMedia,
-          practiceMenu: serializePracticeMenuForFirestore(composeState.practiceMenu),
+          feedKind: composeState.feedKind,
+          practiceMenu:
+            composeState.feedKind === "menu"
+              ? serializePracticeMenuForFirestore(composeState.practiceMenu)
+              : null,
+          strategyTemplate:
+            composeState.feedKind === "strategy"
+              ? serializePracticeStrategyForFirestore(composeState.strategyTemplate)
+              : null,
           createdByUid: authUser.uid,
           visibility: "public",
           createdAt: serverTimestamp(),
@@ -4287,6 +4383,7 @@ export default function App() {
   return (
     <AppRouter
       styles={styles}
+      isDarkMode={isDarkMode}
       currentScreen={currentScreen}
       isMenuOpen={isMenuOpen}
       setIsMenuOpen={setIsMenuOpen}
@@ -4362,6 +4459,7 @@ export default function App() {
       isPublishing={isPublishing}
       updateComposeState={updateComposeState}
       updatePracticeMenuField={updatePracticeMenuField}
+      updatePracticeStrategyField={updatePracticeStrategyField}
       toggleComposeSport={toggleComposeSport}
       togglePracticeMenuCondition={togglePracticeMenuCondition}
       applyComposeFormatting={applyComposeFormatting}

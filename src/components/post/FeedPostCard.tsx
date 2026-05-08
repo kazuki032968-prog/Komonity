@@ -23,7 +23,7 @@ export function FeedPostCard({
   styles,
   expanded,
   sectionKey,
-  sourceLabel = "メニュー・戦術",
+  sourceLabel = post.feedKind === "strategy" ? "戦術" : "メニュー",
   showMetrics = false,
   liked = false,
   likeCount,
@@ -48,7 +48,10 @@ export function FeedPostCard({
   repostCount?: number;
   backScreen: ScreenKey;
   renderHashtagChips: (tags: string[]) => ReactNode;
-  renderPracticeMenu: (menu: FeedPost["practiceMenu"]) => ReactNode;
+  renderPracticeMenu: (
+    menu: FeedPost["practiceMenu"],
+    strategy?: FeedPost["strategyTemplate"]
+  ) => ReactNode;
   onToggleExpanded: (id: string) => void;
   onOpenUrl: (url: string, label?: string) => void;
   onOpenUserProfile: (profile: {
@@ -125,7 +128,7 @@ export function FeedPostCard({
             onOpenUrl={onOpenUrl}
           />
         ) : null}
-        {renderPracticeMenu(post.practiceMenu)}
+        {renderPracticeMenu(post.practiceMenu, post.strategyTemplate)}
         <MediaGallery media={post.media} />
         {renderHashtagChips(feedDisplay.tags)}
       </Pressable>

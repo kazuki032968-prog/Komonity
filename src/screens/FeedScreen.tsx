@@ -37,7 +37,10 @@ export function FeedScreen({
   repostCountMap: Record<string, number>;
   expandedBodyIds: string[];
   renderHashtagChips: (tags: string[]) => ReactNode;
-  renderPracticeMenu: (menu: FeedPost["practiceMenu"]) => ReactNode;
+  renderPracticeMenu: (
+    menu: FeedPost["practiceMenu"],
+    strategy?: FeedPost["strategyTemplate"]
+  ) => ReactNode;
   onToggleExpandedBody: (id: string) => void;
   onOpenExternalUrl: (url: string, label?: string) => void;
   onOpenUserProfile: (profile: {

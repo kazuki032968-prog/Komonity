@@ -89,7 +89,11 @@ export function PostDetailScreen({
   replySelection: TextSelectionRange;
   replyMedia: LocalMediaAsset[];
   isReplySubmitting: boolean;
-  renderPracticeMenu: (menu: PostDetailState["practiceMenu"], variant?: "summary" | "detail") => ReactNode;
+  renderPracticeMenu: (
+    menu: PostDetailState["practiceMenu"],
+    strategy: PostDetailState["strategyTemplate"],
+    variant?: "summary" | "detail"
+  ) => ReactNode;
   renderHashtagChips: (tags: string[]) => ReactNode;
   getReplyInteractionSummary: (payload: {
     rootPostId: string;
@@ -198,7 +202,11 @@ export function PostDetailScreen({
               onOpenUrl={onOpenExternalUrl}
             />
           ) : null}
-          {renderPracticeMenu(postDetail.practiceMenu, "detail")}
+          {renderPracticeMenu(
+            postDetail.practiceMenu,
+            postDetail.strategyTemplate,
+            "detail"
+          )}
           <MediaGallery media={postDetail.media} />
           {renderHashtagChips(display.tags)}
 

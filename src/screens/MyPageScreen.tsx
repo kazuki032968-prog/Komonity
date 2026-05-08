@@ -17,6 +17,7 @@ import type {
   BadgeModalState,
   PostDetailState,
   PracticeMenuTemplate,
+  PracticeStrategyTemplate,
   ProfileAnswerItem,
   ProfilePostItem,
   ProfileState,
@@ -91,7 +92,10 @@ export function MyPageScreen({
   pinnedPostKey: string | null;
   expandedBodyIds: string[];
   renderCoachProfileDetails: (profile: ProfileState) => ReactNode;
-  renderPracticeMenu: (menu?: PracticeMenuTemplate) => ReactNode;
+  renderPracticeMenu: (
+    menu?: PracticeMenuTemplate,
+    strategy?: PracticeStrategyTemplate
+  ) => ReactNode;
   renderHashtagChips: (tags: string[]) => ReactNode;
   onBack: () => void;
   onGoToRegister: () => void;
@@ -297,7 +301,9 @@ export function MyPageScreen({
                               title: post.title,
                               body: post.body,
                               media: post.media,
+                              feedKind: post.feedKind,
                               practiceMenu: post.practiceMenu,
+                              strategyTemplate: post.strategyTemplate,
                               replies: post.replies,
                               sports: post.sports,
                               tags: post.tags,
@@ -318,7 +324,7 @@ export function MyPageScreen({
                             onOpenUrl={onOpenExternalUrl}
                           />
                         ) : null}
-                        {renderPracticeMenu(post.practiceMenu)}
+                        {renderPracticeMenu(post.practiceMenu, post.strategyTemplate)}
                         <MediaGallery media={post.media} compact={true} />
                         {renderHashtagChips(display.tags)}
                       </Pressable>

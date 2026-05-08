@@ -38,6 +38,7 @@ import type { ScreenKey } from "../types/app";
 
 type AppRouterProps = {
   styles: Record<string, any>;
+  isDarkMode?: boolean;
   currentScreen: ScreenKey;
   isMenuOpen: boolean;
   setIsMenuOpen: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -48,14 +49,15 @@ type AppRouterProps = {
 
 type LineIconProps = {
   active?: boolean;
+  isDarkMode?: boolean;
   styles: Record<string, any>;
 };
 
-const getLineIconColor = (active?: boolean) =>
-  active ? "#0f766e" : "#4b5563";
+const getLineIconColor = (active?: boolean, isDarkMode?: boolean) =>
+  active ? (isDarkMode ? "#5eead4" : "#0f766e") : isDarkMode ? "#cbd5e1" : "#4b5563";
 
-function HomeLineIcon({ active, styles }: LineIconProps) {
-  const color = getLineIconColor(active);
+function HomeLineIcon({ active, isDarkMode, styles }: LineIconProps) {
+  const color = getLineIconColor(active, isDarkMode);
 
   return (
     <View style={styles.lineIconBox}>
@@ -65,8 +67,8 @@ function HomeLineIcon({ active, styles }: LineIconProps) {
   );
 }
 
-function SearchLineIcon({ active, styles }: LineIconProps) {
-  const color = getLineIconColor(active);
+function SearchLineIcon({ active, isDarkMode, styles }: LineIconProps) {
+  const color = getLineIconColor(active, isDarkMode);
 
   return (
     <View style={styles.lineIconBox}>
@@ -76,8 +78,8 @@ function SearchLineIcon({ active, styles }: LineIconProps) {
   );
 }
 
-function BellLineIcon({ active, styles }: LineIconProps) {
-  const color = getLineIconColor(active);
+function BellLineIcon({ active, isDarkMode, styles }: LineIconProps) {
+  const color = getLineIconColor(active, isDarkMode);
 
   return (
     <View style={styles.lineIconBox}>
@@ -87,8 +89,8 @@ function BellLineIcon({ active, styles }: LineIconProps) {
   );
 }
 
-function UserLineIcon({ active, styles }: LineIconProps) {
-  const color = getLineIconColor(active);
+function UserLineIcon({ active, isDarkMode, styles }: LineIconProps) {
+  const color = getLineIconColor(active, isDarkMode);
 
   return (
     <View style={styles.lineIconBox}>
@@ -141,6 +143,7 @@ function BottomNavButton({
 export function AppRouter(props: AppRouterProps) {
   const {
     styles,
+    isDarkMode,
     currentScreen,
     isMenuOpen,
     setIsMenuOpen,
@@ -216,6 +219,7 @@ export function AppRouter(props: AppRouterProps) {
     isPublishing,
     updateComposeState,
     updatePracticeMenuField,
+    updatePracticeStrategyField,
     toggleComposeSport,
     togglePracticeMenuCondition,
     applyComposeFormatting,
@@ -331,7 +335,7 @@ export function AppRouter(props: AppRouterProps) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
       <View style={styles.globalHeader}>
         <Pressable onPress={() => goToScreen("top")} style={styles.logoButton}>
           <KomonityLogo />
@@ -547,6 +551,7 @@ export function AppRouter(props: AppRouterProps) {
           onGoToLogin={() => setCurrentScreen("login")}
           onUpdateComposeState={updateComposeState}
           onUpdatePracticeMenuField={updatePracticeMenuField}
+          onUpdatePracticeStrategyField={updatePracticeStrategyField}
           onToggleComposeSport={toggleComposeSport}
           onTogglePracticeMenuCondition={togglePracticeMenuCondition}
           onApplyComposeFormatting={applyComposeFormatting}
@@ -857,14 +862,26 @@ export function AppRouter(props: AppRouterProps) {
         <View style={styles.bottomNav}>
           <BottomNavButton
             label="タイムライン"
-            icon={<HomeLineIcon active={currentScreen === "top"} styles={styles} />}
+            icon={
+              <HomeLineIcon
+                active={currentScreen === "top"}
+                isDarkMode={isDarkMode}
+                styles={styles}
+              />
+            }
             active={currentScreen === "top"}
             styles={styles}
             onPress={() => goToScreen("top")}
           />
           <BottomNavButton
             label="検索"
-            icon={<SearchLineIcon active={currentScreen === "search"} styles={styles} />}
+            icon={
+              <SearchLineIcon
+                active={currentScreen === "search"}
+                isDarkMode={isDarkMode}
+                styles={styles}
+              />
+            }
             active={currentScreen === "search"}
             styles={styles}
             onPress={() => goToScreen("search")}
@@ -883,6 +900,7 @@ export function AppRouter(props: AppRouterProps) {
             icon={
               <BellLineIcon
                 active={currentScreen === "notifications"}
+                isDarkMode={isDarkMode}
                 styles={styles}
               />
             }
@@ -896,6 +914,7 @@ export function AppRouter(props: AppRouterProps) {
             icon={
               <UserLineIcon
                 active={currentScreen === "mypage"}
+                isDarkMode={isDarkMode}
                 styles={styles}
               />
             }
