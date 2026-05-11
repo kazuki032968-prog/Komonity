@@ -23,7 +23,7 @@ import {
 
 type SharedStyles = Record<string, any>;
 const EMPTY_STYLES: SharedStyles = sharedStyles;
-const KOMONITY_LOGO_SOURCE = require("../../assets/logo-komonity-header.png");
+const KOMONITY_LOGO_SOURCE = require("../../assets/logo-komonity-header-transparent.png");
 
 type RenderLinkableTextSegmentsOptions = {
   text: string;

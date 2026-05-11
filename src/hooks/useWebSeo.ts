@@ -35,9 +35,26 @@ const ensureCanonicalTag = () => {
   return element;
 };
 
+const ensureStructuredDataTag = () => {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const existing = document.head.querySelector("script#komonity-structured-data");
+  if (existing instanceof HTMLScriptElement) {
+    return existing;
+  }
+
+  const element = document.createElement("script");
+  element.setAttribute("id", "komonity-structured-data");
+  element.setAttribute("type", "application/ld+json");
+  document.head.appendChild(element);
+  return element;
+};
+
 /**
  * Web で document title と主要 meta tags を更新します。
- * SPA でも共有時の最低限の情報を揃えられるようにしています。
+ * SPA でも共有時と検索エンジン向けの最低限の情報を揃えられるようにしています。
  */
 export function useWebSeo(meta: SeoMeta) {
   useEffect(() => {
@@ -49,6 +66,7 @@ export function useWebSeo(meta: SeoMeta) {
     document.documentElement.lang = "ja";
 
     const descriptionTag = ensureMetaTag("meta[name='description']", "name", "description");
+    const keywordsTag = ensureMetaTag("meta[name='keywords']", "name", "keywords");
     const ogTitleTag = ensureMetaTag("meta[property='og:title']", "property", "og:title");
     const ogDescriptionTag = ensureMetaTag(
       "meta[property='og:description']",
@@ -83,9 +101,13 @@ export function useWebSeo(meta: SeoMeta) {
     );
     const robotsTag = ensureMetaTag("meta[name='robots']", "name", "robots");
     const canonicalTag = ensureCanonicalTag();
+    const structuredDataTag = ensureStructuredDataTag();
 
     if (descriptionTag) {
       descriptionTag.setAttribute("content", meta.description);
+    }
+    if (keywordsTag) {
+      keywordsTag.setAttribute("content", meta.keywords.join(", "));
     }
     if (ogTitleTag) {
       ogTitleTag.setAttribute("content", meta.title);
@@ -128,6 +150,9 @@ export function useWebSeo(meta: SeoMeta) {
     }
     if (canonicalTag) {
       canonicalTag.setAttribute("href", meta.canonicalUrl);
+    }
+    if (structuredDataTag) {
+      structuredDataTag.textContent = JSON.stringify(meta.structuredData);
     }
   }, [meta]);
 }
