@@ -8,6 +8,8 @@ const distDir = resolve(rootDir, "dist");
 const indexPath = resolve(distDir, "index.html");
 const ogImageSourcePath = resolve(rootDir, "assets", "logo-komonity-header.png");
 const ogImageOutputPath = resolve(distDir, "ogp.png");
+const searchConsoleVerificationSourcePath = resolve(rootDir, "assets", "googlea718f0af9c496860.html");
+const searchConsoleVerificationOutputPath = resolve(distDir, "googlea718f0af9c496860.html");
 const adsTxtOutputPath = resolve(distDir, "ads.txt");
 const robotsTxtOutputPath = resolve(distDir, "robots.txt");
 const sitemapOutputPath = resolve(distDir, "sitemap.xml");
@@ -17,6 +19,7 @@ const title = "Komonity | 顧問の先生と指導者をつなぐ部活支援SNS
 const description =
   "Komonityは、専門外の部活指導で悩む顧問の先生と知見を持つ指導者をつなぎ、練習メニュー・戦術・相談・コミュニティで現場の知見を共有できるサービスです。";
 const ogImageUrl = `${siteUrl}/ogp.png`;
+const googleSiteVerification = "w9-kPf_JrwFTgLsZf1etFMNbG0pPycKx5WNQpVC7yIc";
 const keywords = [
   "Komonity",
   "コモニティ",
@@ -155,6 +158,10 @@ if (existsSync(ogImageSourcePath)) {
   copyFileSync(ogImageSourcePath, ogImageOutputPath);
 }
 
+if (existsSync(searchConsoleVerificationSourcePath)) {
+  copyFileSync(searchConsoleVerificationSourcePath, searchConsoleVerificationOutputPath);
+}
+
 let html = readFileSync(indexPath, "utf8");
 
 html = html.replace("<html lang=\"en\">", "<html lang=\"ja\">");
@@ -169,6 +176,7 @@ const metaBlock = `
     <meta name="description" content="${escapeHtml(description)}" />
     <meta name="keywords" content="${escapeHtml(keywords.join(", "))}" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="google-site-verification" content="${googleSiteVerification}" />
     <link rel="canonical" href="${siteUrl}" />
     <meta property="og:site_name" content="Komonity" />
     <meta property="og:locale" content="ja_JP" />

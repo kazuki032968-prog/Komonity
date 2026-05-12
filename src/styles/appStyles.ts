@@ -94,6 +94,9 @@ const darkStyleOverrides: Record<string, Partial<StyleRecord>> = {
   globalHeader: {
     backgroundColor: darkTheme.background,
   },
+  logoButton: {
+    backgroundColor: "#ffffff",
+  },
   bottomComposeButton: {
     backgroundColor: darkTheme.accentStrong,
     boxShadow: "0 18px 34px rgba(20, 184, 166, 0.28)",
@@ -196,6 +199,9 @@ export const styles = StyleSheet.create({
   },
   logoButton: {
     alignSelf: "flex-start",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    overflow: "hidden",
   },
   logoText: {
     color: colors.brand,

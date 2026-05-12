@@ -424,7 +424,10 @@ export const sharedStyles = StyleSheet.create({
   logoWrap: {
     width: 184,
     height: 62,
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
     justifyContent: "center",
+    overflow: "hidden",
   },
   logoImage: {
     width: "100%",
