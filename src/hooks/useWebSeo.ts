@@ -146,7 +146,7 @@ export function useWebSeo(meta: SeoMeta) {
       twitterImageTag.setAttribute("content", meta.imageUrl);
     }
     if (robotsTag) {
-      robotsTag.setAttribute("content", "index,follow,max-image-preview:large");
+      robotsTag.setAttribute("content", meta.robots);
     }
     if (canonicalTag) {
       canonicalTag.setAttribute("href", meta.canonicalUrl);

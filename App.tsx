@@ -214,6 +214,13 @@ import {
 const isMockAccount = (accountId?: string) =>
   typeof accountId === "string" && accountId.startsWith("mock-");
 
+const seedDirectoryAccounts: SearchAccountItem[] = mockDirectoryAccounts;
+const seedDirectoryMetaMap: Record<string, UserDirectoryMeta> = mockDirectoryMetaMap;
+const seedFollowRecords: FollowRecord[] = mockFollowRecords;
+const seedFeedPosts: FeedPost[] = mockFeedPosts;
+const seedQuestionPosts: QuestionPost[] = mockQuestionPosts;
+const seedCommunityPosts: CommunityPost[] = mockCommunityPosts;
+
 export default function App() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
@@ -258,24 +265,24 @@ export default function App() {
   const [accountDeleteConfirmStep, setAccountDeleteConfirmStep] =
     useState<AccountDeleteConfirmStep>("idle");
   const [directoryAccounts, setDirectoryAccounts] =
-    useState<SearchAccountItem[]>(mockDirectoryAccounts);
+    useState<SearchAccountItem[]>(seedDirectoryAccounts);
   const [directoryMetaMap, setDirectoryMetaMap] =
-    useState<Record<string, UserDirectoryMeta>>(mockDirectoryMetaMap);
+    useState<Record<string, UserDirectoryMeta>>(seedDirectoryMetaMap);
   const [followRecords, setFollowRecords] =
-    useState<FollowRecord[]>(mockFollowRecords);
+    useState<FollowRecord[]>(seedFollowRecords);
   const [blockRecords, setBlockRecords] = useState<BlockRecord[]>([]);
   const [postAlertRecords, setPostAlertRecords] = useState<PostAlertRecord[]>([]);
   const [likeRecords, setLikeRecords] = useState<InteractionRecord[]>([]);
   const [repostRecords, setRepostRecords] = useState<InteractionRecord[]>([]);
   const [bookmarkRecords, setBookmarkRecords] = useState<InteractionRecord[]>([]);
   const [feedTimeline, setFeedTimeline] = useState<FeedPost[]>(
-    mergeItemsById(mockFeedPosts, initialFeedPosts)
+    mergeItemsById(seedFeedPosts, initialFeedPosts)
   );
   const [questionBoard, setQuestionBoard] = useState<QuestionPost[]>(
-    mergeItemsById(mockQuestionPosts, initialQuestions)
+    mergeItemsById(seedQuestionPosts, initialQuestions)
   );
   const [communityBoard, setCommunityBoard] =
-    useState<CommunityPost[]>(mergeItemsById(mockCommunityPosts, initialCommunityItems));
+    useState<CommunityPost[]>(mergeItemsById(seedCommunityPosts, initialCommunityItems));
   const [composeState, setComposeState] = useState<ComposeState>(initialComposeState);
   const [composeMedia, setComposeMedia] = useState<LocalMediaAsset[]>([]);
   const [composeBodySelection, setComposeBodySelection] =
@@ -363,8 +370,8 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
-      setDirectoryAccounts(mockDirectoryAccounts);
-      setDirectoryMetaMap(mockDirectoryMetaMap);
+      setDirectoryAccounts(seedDirectoryAccounts);
+      setDirectoryMetaMap(seedDirectoryMetaMap);
       return;
     }
 
@@ -480,19 +487,19 @@ export default function App() {
         firestoreAccounts.forEach((account) => {
           mergedAccounts.set(account.id, account);
         });
-        mockDirectoryAccounts.forEach((account) => {
+        seedDirectoryAccounts.forEach((account) => {
           mergedAccounts.set(account.id, account);
         });
 
         setDirectoryAccounts(Array.from(mergedAccounts.values()));
         setDirectoryMetaMap({
-          ...mockDirectoryMetaMap,
+          ...seedDirectoryMetaMap,
           ...nextMetaMap,
         });
       },
       (error) => {
-        setDirectoryAccounts(mockDirectoryAccounts);
-        setDirectoryMetaMap(mockDirectoryMetaMap);
+        setDirectoryAccounts(seedDirectoryAccounts);
+        setDirectoryMetaMap(seedDirectoryMetaMap);
         setAuthError(
           `公開プロフィールの読込に失敗しました。${toSaveErrorMessage(error)}`
         );
@@ -504,7 +511,7 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
-      setFollowRecords(mockFollowRecords);
+      setFollowRecords(seedFollowRecords);
       return;
     }
 
@@ -529,10 +536,10 @@ export default function App() {
           })
           .filter((item): item is FollowRecord => Boolean(item));
 
-        setFollowRecords([...mockFollowRecords, ...nextFollows]);
+        setFollowRecords([...seedFollowRecords, ...nextFollows]);
       },
       () => {
-        setFollowRecords(mockFollowRecords);
+        setFollowRecords(seedFollowRecords);
       }
     );
 
@@ -732,9 +739,9 @@ export default function App() {
 
   useEffect(() => {
     if (!db) {
-      setFeedTimeline(mergeItemsById(mockFeedPosts, initialFeedPosts));
-      setQuestionBoard(mergeItemsById(mockQuestionPosts, initialQuestions));
-      setCommunityBoard(mergeItemsById(mockCommunityPosts, initialCommunityItems));
+      setFeedTimeline(mergeItemsById(seedFeedPosts, initialFeedPosts));
+      setQuestionBoard(mergeItemsById(seedQuestionPosts, initialQuestions));
+      setCommunityBoard(mergeItemsById(seedCommunityPosts, initialCommunityItems));
       return;
     }
 
@@ -785,7 +792,7 @@ export default function App() {
         }];
       });
 
-      setFeedTimeline(mergeItemsById(mockFeedPosts, firestorePosts));
+      setFeedTimeline(mergeItemsById(seedFeedPosts, firestorePosts));
     });
 
     const unsubscribeQuestions = onSnapshot(questionQuery, (snapshot) => {
@@ -823,7 +830,7 @@ export default function App() {
         }];
       });
 
-      setQuestionBoard(mergeItemsById(mockQuestionPosts, firestoreQuestions));
+      setQuestionBoard(mergeItemsById(seedQuestionPosts, firestoreQuestions));
     });
 
     const unsubscribeCommunity = onSnapshot(communityQuery, (snapshot) => {
@@ -851,7 +858,7 @@ export default function App() {
         }];
       });
 
-      setCommunityBoard(mergeItemsById(mockCommunityPosts, firestoreCommunities));
+      setCommunityBoard(mergeItemsById(seedCommunityPosts, firestoreCommunities));
     });
 
     return () => {
@@ -2254,6 +2261,7 @@ export default function App() {
       name: profileState.name,
       handle: profileState.handle,
       bio: profileState.bio,
+      avatarUrl: profileState.avatarUrl,
       followers: String(followerCountMap[authUser.uid] ?? 0),
       featured: false,
       role: profileState.role,
@@ -2269,6 +2277,31 @@ export default function App() {
       paidConsultationAvailable: profileState.paidConsultationAvailable,
     });
   }
+
+  const getAuthorAvatarUrl = ({
+    uid,
+    name,
+  }: {
+    uid?: string;
+    name?: string;
+  }) => {
+    if (uid) {
+      return (
+        directoryMetaMap[uid]?.iconUrl ??
+        accountDirectory.get(uid)?.avatarUrl ??
+        ""
+      );
+    }
+
+    if (!name) {
+      return "";
+    }
+
+    return (
+      directoryAccounts.find((account) => account.name === name)?.avatarUrl ??
+      ""
+    );
+  };
 
   const currentProfilePostsValue = authUser
     ? String(authoredPostCountForUser(authUser.uid, profileState.name))
@@ -4412,6 +4445,7 @@ export default function App() {
       requestOpenExternalUrl={requestOpenExternalUrl}
       togglePostInteraction={togglePostInteraction}
       renderHashtagChips={renderHashtagChips}
+      getAuthorAvatarUrl={getAuthorAvatarUrl}
       overviewStats={overviewStats}
       handleLogout={handleLogout}
       renderPracticeMenu={renderPracticeMenu}

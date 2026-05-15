@@ -1,14 +1,19 @@
 import {
   DEFAULT_OG_IMAGE_URL,
   DEFAULT_PUBLIC_SITE_URL,
+  featureArticleMap,
+  featureArticles,
+  seoLandingPageMap,
   sportGroups,
   timelineSections,
 } from "../constants/app";
 import type {
+  FeatureArticleConfig,
   PostDetailState,
   ProfileState,
   ReplyDetailState,
   ScreenKey,
+  SeoLandingPageConfig,
   TimelineSectionKey,
   UserProfileState,
 } from "../types/app";
@@ -31,8 +36,12 @@ export type SeoMeta = {
   canonicalUrl: string;
   imageUrl: string;
   keywords: string[];
+  robots: string;
   structuredData: Record<string, unknown>[];
 };
+
+const INDEX_ROBOTS = "index,follow,max-image-preview:large";
+const NOINDEX_ROBOTS = "noindex,follow";
 
 const advisorSearchKeywords = [
   "部活 顧問",
@@ -126,7 +135,7 @@ const createStructuredData = ({
   canonicalUrl,
   imageUrl,
   keywords,
-}: Omit<SeoMeta, "structuredData">): Record<string, unknown>[] => [
+}: Omit<SeoMeta, "structuredData" | "robots">): Record<string, unknown>[] => [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -167,15 +176,18 @@ const createStructuredData = ({
   },
 ];
 
+type CreateSeoMetaParams = Omit<SeoMeta, "keywords" | "structuredData" | "robots"> &
+  Partial<Pick<SeoMeta, "keywords" | "structuredData" | "robots">>;
+
 const createSeoMeta = ({
   title,
   description,
   canonicalUrl,
   imageUrl = DEFAULT_OG_IMAGE_URL,
   keywords = [],
+  robots = INDEX_ROBOTS,
   structuredData = [],
-}: Omit<SeoMeta, "keywords" | "structuredData"> &
-  Partial<Pick<SeoMeta, "keywords" | "structuredData">>): SeoMeta => {
+}: CreateSeoMetaParams): SeoMeta => {
   const mergedKeywords = uniqueKeywords(baseSeoKeywords, keywords).slice(0, 220);
   const baseStructuredData = createStructuredData({
     title,
@@ -191,14 +203,58 @@ const createSeoMeta = ({
     canonicalUrl,
     imageUrl,
     keywords: mergedKeywords,
+    robots,
     structuredData: [...baseStructuredData, ...structuredData],
   };
 };
+
+const createNoindexSeoMeta = (params: CreateSeoMetaParams): SeoMeta =>
+  createSeoMeta({ ...params, robots: NOINDEX_ROBOTS });
 
 const createAbsoluteUrl = (pathname: string) => {
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
   return `${DEFAULT_PUBLIC_SITE_URL}${normalizedPath === "/" ? "" : normalizedPath}`;
 };
+
+const createLandingStructuredData = (
+  page: SeoLandingPageConfig,
+  canonicalUrl: string
+): Record<string, unknown> => ({
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: page.title,
+  description: page.description,
+  url: canonicalUrl,
+  image: DEFAULT_OG_IMAGE_URL,
+  inLanguage: "ja-JP",
+  keywords: page.primaryKeywords.join(", "),
+  publisher: {
+    "@type": "Organization",
+    name: "Komonity",
+    url: DEFAULT_PUBLIC_SITE_URL,
+  },
+});
+
+const createFeatureStructuredData = (
+  article: FeatureArticleConfig,
+  canonicalUrl: string
+): Record<string, unknown> => ({
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: article.title,
+  description: article.description,
+  url: canonicalUrl,
+  image: DEFAULT_OG_IMAGE_URL,
+  inLanguage: "ja-JP",
+  dateModified: article.updatedAt,
+  articleSection: article.category,
+  keywords: article.keywords.join(", "),
+  publisher: {
+    "@type": "Organization",
+    name: "Komonity",
+    url: DEFAULT_PUBLIC_SITE_URL,
+  },
+});
 
 const sectionLabelMap = Object.fromEntries(
   timelineSections.map((section) => [section.key, section.label])
@@ -285,6 +341,62 @@ export function buildSeoMeta({
   pathname,
 }: BuildSeoMetaParams): SeoMeta {
   const canonicalUrl = createAbsoluteUrl(pathname);
+  const seoLandingPage = seoLandingPageMap[currentScreen];
+
+  if (seoLandingPage) {
+    return createSeoMeta({
+      title: `Komonity | ${seoLandingPage.title}`,
+      description: seoLandingPage.description,
+      canonicalUrl,
+      imageUrl: DEFAULT_OG_IMAGE_URL,
+      keywords: seoLandingPage.primaryKeywords,
+      structuredData: [createLandingStructuredData(seoLandingPage, canonicalUrl)],
+    });
+  }
+
+  if (currentScreen === "features") {
+    return createSeoMeta({
+      title: "Komonity | 部活指導・指導者集客の特集一覧",
+      description:
+        "顧問の先生向けの練習メニュー検索、指導者向けの集客プロフィール、活動バッジと信頼スコアなど、Komonityの活用テーマをまとめた特集一覧です。",
+      canonicalUrl,
+      imageUrl: DEFAULT_OG_IMAGE_URL,
+      keywords: [
+        "部活指導 特集",
+        "顧問 練習メニュー 検索",
+        "指導者 集客",
+        "外部指導者 プロフィール",
+        "部活 バッジ 信頼スコア",
+      ],
+      structuredData: [
+        {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Komonity 特集一覧",
+          url: canonicalUrl,
+          description: "部活顧問と指導者の検索意図に合わせた特集記事の一覧です。",
+          hasPart: featureArticles.map((article) => ({
+            "@type": "Article",
+            headline: article.title,
+            url: `${DEFAULT_PUBLIC_SITE_URL}${article.path}`,
+          })),
+        },
+      ],
+    });
+  }
+
+  const featureArticle = featureArticleMap[currentScreen];
+
+  if (featureArticle) {
+    return createSeoMeta({
+      title: `Komonity | ${featureArticle.title}`,
+      description: featureArticle.description,
+      canonicalUrl,
+      imageUrl: DEFAULT_OG_IMAGE_URL,
+      keywords: featureArticle.keywords,
+      structuredData: [createFeatureStructuredData(featureArticle, canonicalUrl)],
+    });
+  }
 
   if (currentScreen === "top") {
     const sectionLabel = sectionLabelMap[activeTimelineSection];
@@ -329,7 +441,7 @@ export function buildSeoMeta({
   const standaloneMeta = standalonePageMeta[currentScreen];
 
   if (standaloneMeta) {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       ...standaloneMeta,
       canonicalUrl,
       imageUrl: DEFAULT_OG_IMAGE_URL,
@@ -348,7 +460,7 @@ export function buildSeoMeta({
     return createSeoMeta({
       title: "Komonity | 専門外の部活指導で悩む顧問と指導者をつなぐサービス",
       description:
-        "専門外の部活指導で悩む顧問の先生と、練習メニュー・戦術・怪我予防の知見を持つ指導者をつなぐ部活支援SNSです。先行公開中で、指導者・経験者の参加を歓迎しています。",
+        "専門外の部活指導で悩む顧問の先生と、練習メニュー・戦術・怪我予防の知見を持つ指導者をつなぐ部活支援SNSです。部活現場で使える型付きナレッジと相談の場を提供します。",
       canonicalUrl,
       imageUrl: DEFAULT_OG_IMAGE_URL,
       keywords: [
@@ -363,7 +475,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "search") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: searchQuery ? `Komonity | 「${searchQuery}」の検索結果` : "Komonity | 検索",
       description: searchQuery
         ? `Komonity 内で「${searchQuery}」に関する練習メニュー、戦術、相談、コミュニティ投稿、指導者アカウントを検索した結果です。`
@@ -377,7 +489,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "user-profile") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: `Komonity | ${selectedUserProfile.name}`,
       description:
         selectedUserProfile.bio?.trim() ||
@@ -394,7 +506,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "mypage") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: `Komonity | ${profileState.name} のマイページ`,
       description: "Komonity における自分の投稿、回答、通知状況を確認できるマイページです。",
       canonicalUrl,
@@ -403,7 +515,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "experts") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 話題の指導者",
       description:
         "種目、活動実績、バッジ、フォロワー数、ベストアンサー数などを参考に、部活指導の知見を持つ話題の指導者を探せるページです。",
@@ -414,7 +526,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "notifications") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 通知",
       description:
         "いいね、返信、保存、再投稿、投稿通知など、Komonity内の反応を確認できる通知ページです。",
@@ -424,7 +536,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "post-compose") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 投稿する",
       description:
         "練習メニュー、相談、コミュニティ投稿を作成し、部活現場で使える知見を共有するページです。",
@@ -434,7 +546,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "profile-edit") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | プロフィール編集",
       description:
         "表示名、アイコン、ヘッダー画像、種目、指導者プロフィールなどを編集できるページです。",
@@ -444,7 +556,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "registration-role") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 新規登録",
       description:
         "顧問アカウントまたは指導者アカウントを選んで、Komonityへの登録を始めるページです。",
@@ -454,7 +566,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "advisor-registration") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 顧問登録",
       description:
         "部活顧問として相談投稿やコミュニティ参加を始めるためのアカウント登録ページです。",
@@ -464,7 +576,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "coach-registration") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | 指導者登録",
       description:
         "指導経験、専門種目、得意分野、資格、所属スクール、YouTubeやSNS、相談受付可否を登録し、指導者として部活現場へ知見を届けるためのページです。",
@@ -475,7 +587,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "login") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | ログイン",
       description:
         "Komonityにログインして、投稿、返信、保存、通知、プロフィール管理を利用するページです。",
@@ -485,7 +597,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "forgot-password") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | パスワード再設定",
       description: "Komonityアカウントのパスワード再設定メールを送信するページです。",
       canonicalUrl,
@@ -504,7 +616,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "relationship-list") {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: "Komonity | フォロー一覧",
       description:
         "Komonityでフォローしているアカウントやフォロワーを確認できるページです。",
@@ -514,7 +626,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "post-detail" && postDetail.id) {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: `Komonity | ${postDetail.title || "投稿詳細"}`,
       description:
         postDetail.body.slice(0, 120) ||
@@ -532,7 +644,7 @@ export function buildSeoMeta({
   }
 
   if (currentScreen === "reply-detail" && replyDetail.reply.id) {
-    return createSeoMeta({
+    return createNoindexSeoMeta({
       title: `Komonity | 返信の詳細`,
       description:
         replyDetail.reply.body.slice(0, 120) ||
@@ -560,7 +672,7 @@ export function buildSeoMeta({
     });
   }
 
-  return createSeoMeta({
+  return createNoindexSeoMeta({
     title: "Komonity",
     description:
       "顧問の先生と指導者をつなぎ、メニュー・戦術、相談、コミュニティを通じて知見を共有できるサービスです。",

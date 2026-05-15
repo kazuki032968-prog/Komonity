@@ -49,6 +49,9 @@ export function SideMenu({
         >
           <Text style={styles.sideMenuItemText}>サービス詳細</Text>
         </Pressable>
+        <Pressable style={styles.sideMenuItem} onPress={() => navigate("features")}>
+          <Text style={styles.sideMenuItemText}>特集一覧</Text>
+        </Pressable>
         <Pressable style={styles.sideMenuItem} onPress={() => navigate("post-compose")}>
           <Text style={styles.sideMenuItemText}>投稿する</Text>
         </Pressable>

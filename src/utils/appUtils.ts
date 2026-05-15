@@ -14,6 +14,7 @@ import type {
   ProfileState,
   ResolvedWebRoute,
   RichFormatAction,
+  ScreenKey,
   SearchAccountItem,
   SearchContentFilterKey,
   TextSelectionRange,
@@ -549,7 +550,11 @@ export const parseWebRoute = (pathname: string, search: string): ResolvedWebRout
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/";
   const searchParams = new URLSearchParams(search);
 
-  if (normalizedPathname === "/" || normalizedPathname === "/timeline") {
+  if (
+    normalizedPathname === "/" ||
+    normalizedPathname === "/timeline" ||
+    normalizedPathname === "/timeline/all"
+  ) {
     return { kind: "screen", screen: "top", timelineSection: "all" };
   }
 
@@ -571,6 +576,33 @@ export const parseWebRoute = (pathname: string, search: string): ResolvedWebRout
 
   if (normalizedPathname === "/service-detail") {
     return { kind: "screen", screen: "service-detail" };
+  }
+
+  const staticScreenRoutes: Record<string, ScreenKey> = {
+    "/for-advisors": "for-advisors",
+    "/for-coaches": "for-coaches",
+    "/coach-marketing": "coach-marketing",
+    "/practice-menu-search": "practice-menu-search",
+    "/practice-menu/soccer": "practice-menu-soccer",
+    "/practice-menu/baseball": "practice-menu-baseball",
+    "/practice-menu/basketball": "practice-menu-basketball",
+    "/practice-menu/tennis": "practice-menu-tennis",
+    "/practice-menu/brass-band": "practice-menu-brass-band",
+    "/practice-menu/rainy-day": "practice-menu-rainy-day",
+    "/practice-menu/60-minutes": "practice-menu-60-minutes",
+    "/practice-menu/beginner": "practice-menu-beginner",
+    "/practice-menu/tournament-prep": "practice-menu-tournament-prep",
+    "/features": "features",
+    "/features/practice-menu-template": "feature-practice-menu-template",
+    "/features/today-practice-menu-search": "feature-today-practice-menu-search",
+    "/features/coach-profile": "feature-coach-profile",
+    "/features/badge-trust-score": "feature-badge-trust-score",
+    "/features/advisor-consultation": "feature-advisor-consultation",
+    "/features/rainy-day-practice": "feature-rainy-day-practice",
+  };
+  const staticScreen = staticScreenRoutes[normalizedPathname];
+  if (staticScreen) {
+    return { kind: "screen", screen: staticScreen };
   }
 
   if (normalizedPathname === "/compose") {

@@ -23,6 +23,7 @@ export function FeedScreen({
   expandedBodyIds,
   renderHashtagChips,
   renderPracticeMenu,
+  getAuthorAvatarUrl,
   onToggleExpandedBody,
   onOpenExternalUrl,
   onOpenUserProfile,
@@ -41,6 +42,7 @@ export function FeedScreen({
     menu: FeedPost["practiceMenu"],
     strategy?: FeedPost["strategyTemplate"]
   ) => ReactNode;
+  getAuthorAvatarUrl: (payload: { uid?: string; name?: string }) => string;
   onToggleExpandedBody: (id: string) => void;
   onOpenExternalUrl: (url: string, label?: string) => void;
   onOpenUserProfile: (profile: {
@@ -99,6 +101,7 @@ export function FeedScreen({
               repostCount={repostCountMap[interactionKey] ?? post.reposts}
               renderHashtagChips={renderHashtagChips}
               renderPracticeMenu={renderPracticeMenu}
+              getAuthorAvatarUrl={getAuthorAvatarUrl}
               onToggleExpanded={onToggleExpandedBody}
               onOpenUrl={onOpenExternalUrl}
               onOpenUserProfile={onOpenUserProfile}

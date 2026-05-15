@@ -6,7 +6,12 @@ import { AppModals } from "../components/modals/AppModals";
 import { SideMenu } from "../components/navigation/SideMenu";
 import { UserActionMenuModal } from "../components/profile/UserActionMenuModal";
 import { KomonityLogo } from "../components/shared";
-import { SUPPORT_EMAIL_ADDRESS } from "../constants/app";
+import {
+  SUPPORT_EMAIL_ADDRESS,
+  featureArticleMap,
+  featureArticles,
+  seoLandingPageMap,
+} from "../constants/app";
 import {
   AdvisorRegistrationScreen,
   CoachRegistrationScreen,
@@ -23,6 +28,8 @@ import {
   QuestionsScreen,
   RelationshipListScreen,
 } from "../screens/BoardScreens";
+import { FeatureDetailScreen } from "../screens/FeatureDetailScreen";
+import { FeatureListScreen } from "../screens/FeatureListScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { LegalDocumentScreen } from "../screens/LegalDocumentScreen";
 import { MyPageScreen } from "../screens/MyPageScreen";
@@ -31,6 +38,7 @@ import { PostDetailScreen } from "../screens/PostDetailScreen";
 import { ProfileEditScreen } from "../screens/ProfileEditScreen";
 import { ReplyDetailScreen } from "../screens/ReplyDetailScreen";
 import { SearchScreen } from "../screens/SearchScreen";
+import { SeoLandingScreen } from "../screens/SeoLandingScreen";
 import { ServiceDetailScreen } from "../screens/ServiceDetailScreen";
 import { TimelineScreen } from "../screens/TimelineScreen";
 import { UserProfileScreen } from "../screens/UserProfileScreen";
@@ -55,6 +63,114 @@ type LineIconProps = {
 
 const getLineIconColor = (active?: boolean, isDarkMode?: boolean) =>
   active ? (isDarkMode ? "#5eead4" : "#0f766e") : isDarkMode ? "#cbd5e1" : "#4b5563";
+
+const legalEffectiveDate = "2026年5月15日";
+
+const privacyPolicySections = [
+  {
+    title: "1. 運営者・お問い合わせ先",
+    body: `Komonity運営は、本プライバシーポリシーに基づき個人情報を取り扱います。個人情報に関するお問い合わせ、開示・訂正・削除・利用停止等のご相談は、${SUPPORT_EMAIL_ADDRESS} またはアプリ内のお問い合わせ画面からご連絡ください。`,
+  },
+  {
+    title: "2. 取得する情報",
+    body: "ログイン用メールアドレス、表示名、表示ID、プロフィール情報、外部リンク、投稿・返信・画像・動画、いいね・保存・フォロー・ブロック・通報・投稿通知の操作情報、お問い合わせ内容、端末やブラウザから送信されるアクセス情報、Cookie等の識別子を取得する場合があります。パスワードはFirebase Authentication等の認証基盤で管理され、当サービスが閲覧できる形では保存しません。",
+  },
+  {
+    title: "3. 公開される情報",
+    body: "表示名、表示ID、役割、プロフィール、外部リンク、投稿、返信、添付した画像・動画、選択した種目など、利用者が公開または投稿した情報は他の利用者やインターネット上の閲覧者から確認できる場合があります。学校名、生徒の氏名、顔写真、連絡先など、第三者を特定できる情報の投稿には十分注意してください。",
+  },
+  {
+    title: "4. 利用目的",
+    body: "アカウント管理、本人確認、投稿・返信・検索・通知・フォロー等の機能提供、不具合対応、お問い合わせ対応、通報・スパム・不正利用への対応、サービス改善、利用状況の分析、広告配信、法令や規約に基づく権利保護のために利用します。",
+  },
+  {
+    title: "5. 外部サービス・委託先",
+    body: "認証、データ保存、画像・動画保存、メール送信、広告配信等のため、Firebase Authentication、Cloud Firestore、Cloud Storage、Firebase Extensions、Google AdSense等の外部サービスを利用する場合があります。これらのサービス提供者には、機能提供に必要な範囲で情報が送信・保存されることがあります。",
+  },
+  {
+    title: "6. Cookie・広告について",
+    body: "当サービスでは、ログイン状態の維持、利便性向上、利用状況の把握、広告配信のためにCookieや類似技術を利用する場合があります。Googleを含む第三者配信事業者は、利用者の過去のアクセス情報に基づいて広告を配信するためCookieを使用することがあります。利用者はGoogleの広告設定（https://adssettings.google.com/）などからパーソナライズ広告を無効にできます。",
+  },
+  {
+    title: "7. 第三者提供",
+    body: "法令に基づく場合、本人の同意がある場合、人の生命・身体・財産の保護に必要な場合、不正利用対応や権利保護のために必要な場合を除き、個人データを第三者へ提供しません。公開プロフィールや投稿として利用者自身が公開した情報は、サービス上で他者が閲覧できる場合があります。",
+  },
+  {
+    title: "8. 安全管理",
+    body: "アクセス制御、認証、データベースおよびストレージのルール設定、不要データの削除、管理権限の制限など、漏えい・滅失・改ざん・不正アクセスを防ぐために必要かつ適切な安全管理措置を講じます。",
+  },
+  {
+    title: "9. 開示・訂正・削除・利用停止",
+    body: "本人から、保有する個人データの開示、訂正、追加、削除、利用停止、第三者提供停止等の請求があった場合、本人確認のうえ、法令に従い合理的な範囲で対応します。アカウント削除機能を利用した場合、投稿・返信・メディア等の削除処理を行いますが、バックアップ、ログ、他者の投稿内に残る引用等は直ちに削除できない場合があります。",
+  },
+  {
+    title: "10. 未成年者・生徒情報の取扱い",
+    body: "未成年者が当サービスを利用する場合は、保護者等の同意を得てください。部活動の生徒、保護者、学校関係者など第三者の個人情報、顔写真、動画、健康状態、成績、家庭事情等を投稿する場合は、必要な同意や権限を得たうえで、個人が特定されない表現にしてください。",
+  },
+  {
+    title: "11. 改定",
+    body: "本ポリシーを変更する場合、当サービス上での掲示その他適切な方法により周知します。重要な変更については、必要に応じて追加の通知を行います。",
+  },
+  {
+    title: "12. 制定日・最終改定日",
+    body: `制定日・最終改定日: ${legalEffectiveDate}`,
+  },
+];
+
+const termsSections = [
+  {
+    title: "1. 適用",
+    body: "本規約は、Komonityの閲覧、登録、投稿、返信、検索、フォロー、通知、お問い合わせ等、当サービスの利用に関する一切の関係に適用されます。利用者は、本規約およびプライバシーポリシーに同意したうえで当サービスを利用するものとします。",
+  },
+  {
+    title: "2. 利用登録・アカウント管理",
+    body: "利用者は、登録情報を正確かつ最新に保つものとします。ログイン情報の管理責任は利用者にあり、第三者への譲渡、貸与、共有、なりすまし利用を禁止します。登録情報に虚偽、不備、不正利用のおそれがある場合、運営は登録拒否、機能制限、アカウント停止、削除等を行うことがあります。",
+  },
+  {
+    title: "3. サービス内容",
+    body: "Komonityは、部活動の顧問、指導員、関係者が練習メニュー、相談、知見、コミュニティ投稿を共有するためのサービスです。投稿や回答は一般的な情報共有であり、医療、法律、心理、栄養、トレーニング等の専門的判断を代替するものではありません。怪我、疾病、重大なトラブル、緊急性のある問題は、専門家や所属機関へ相談してください。",
+  },
+  {
+    title: "4. 投稿・公開情報",
+    body: "投稿、返信、プロフィール、画像、動画、外部リンク等の内容については、投稿者が責任を負います。利用者は、投稿に必要な権利、許諾、同意を有することを保証します。運営は、当サービスの表示、配信、保存、紹介、検索、広報、改善に必要な範囲で、投稿内容を無償で利用できるものとします。",
+  },
+  {
+    title: "5. 禁止事項",
+    body: "法令違反、公序良俗に反する行為、差別・誹謗中傷・脅迫・ハラスメント、著作権・商標権・肖像権・プライバシー等の侵害、第三者の個人情報や機微情報の無断投稿、危険な練習や体罰を助長する投稿、虚偽または誤解を招く実績表示、スパム、広告・勧誘目的の乱用、不正アクセス、スクレイピング、リバースエンジニアリング、サービス運営や広告審査を妨げる行為を禁止します。",
+  },
+  {
+    title: "6. 生徒・未成年者に関する配慮",
+    body: "利用者は、部活動の生徒や未成年者が特定される氏名、顔写真、動画、学校名、連絡先、健康状態、家庭事情、成績、懲戒・トラブル情報等を、必要な同意や権限なく投稿してはなりません。指導事例を共有する場合は、個人が特定されないよう匿名化・抽象化してください。",
+  },
+  {
+    title: "7. モデレーション・通報対応",
+    body: "運営は、規約違反、権利侵害、不適切投稿、不正利用、広告ポリシー違反のおそれがあると判断した場合、事前通知なく投稿の非表示・削除、広告表示の停止、アカウント制限、通報対応、関係機関への相談等を行うことがあります。利用者からの通報内容に対し、対応結果の個別開示を保証するものではありません。",
+  },
+  {
+    title: "8. 知的財産権",
+    body: "当サービスのロゴ、デザイン、プログラム、文章、画像、その他運営が作成したコンテンツに関する権利は、運営または正当な権利者に帰属します。利用者は、自身の投稿に関する権利を保持しますが、第三者の権利を侵害しない範囲で投稿するものとします。",
+  },
+  {
+    title: "9. 外部リンク・外部取引",
+    body: "プロフィールや投稿に含まれる外部リンク、外部サービス、指導依頼、有料相談、物品販売、イベント参加等は、利用者自身の判断と責任で利用してください。当サービス内で別途明示しない限り、外部で成立する契約、支払い、トラブルについて運営は関与せず、責任を負いません。",
+  },
+  {
+    title: "10. サービスの変更・停止",
+    body: "運営は、機能追加、仕様変更、保守、障害、セキュリティ対応、法令・ポリシー対応、事業上の都合により、当サービスの全部または一部を変更、停止、終了することがあります。これにより利用者に生じた損害について、運営の故意または重過失がある場合を除き責任を負いません。",
+  },
+  {
+    title: "11. 免責",
+    body: "運営は、当サービスの正確性、有用性、安全性、継続性、特定目的への適合性、投稿内容の信頼性、外部リンク先の内容を保証しません。利用者間または第三者との間で生じた紛争は、当事者間で解決するものとします。ただし、法令上免責が認められない場合はこの限りではありません。",
+  },
+  {
+    title: "12. 規約変更・準拠法",
+    body: "運営は、必要に応じて本規約を変更できます。変更後の規約は、当サービス上に掲載した時点または別途定める時点から効力を生じます。本規約は日本法に準拠します。",
+  },
+  {
+    title: "13. お問い合わせ・制定日",
+    body: `本規約に関するお問い合わせは、${SUPPORT_EMAIL_ADDRESS} またはアプリ内のお問い合わせ画面からご連絡ください。制定日・最終改定日: ${legalEffectiveDate}`,
+  },
+];
 
 function HomeLineIcon({ active, isDarkMode, styles }: LineIconProps) {
   const color = getLineIconColor(active, isDarkMode);
@@ -172,6 +288,7 @@ export function AppRouter(props: AppRouterProps) {
     requestOpenExternalUrl,
     togglePostInteraction,
     renderHashtagChips,
+    getAuthorAvatarUrl,
     overviewStats,
     handleLogout,
     renderPracticeMenu,
@@ -332,6 +449,8 @@ export function AppRouter(props: AppRouterProps) {
     "privacy-policy",
     "terms",
   ].includes(currentScreen);
+  const seoLandingPage = seoLandingPageMap[currentScreen];
+  const featureArticle = featureArticleMap[currentScreen];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -379,6 +498,7 @@ export function AppRouter(props: AppRouterProps) {
           onOpenExternalUrl={requestOpenExternalUrl}
           onTogglePostInteraction={(payload) => void togglePostInteraction(payload)}
           renderHashtagChips={renderHashtagChips}
+          getAuthorAvatarUrl={getAuthorAvatarUrl}
         />
         ) : null}
 
@@ -391,6 +511,30 @@ export function AppRouter(props: AppRouterProps) {
           overviewStats={overviewStats}
           onGoToScreen={goToScreen}
           onLogout={handleLogout}
+        />
+        ) : null}
+
+        {seoLandingPage ? (
+        <SeoLandingScreen
+          styles={styles}
+          page={seoLandingPage}
+          onGoToScreen={goToScreen}
+        />
+        ) : null}
+
+        {currentScreen === "features" ? (
+        <FeatureListScreen
+          styles={styles}
+          articles={featureArticles}
+          onGoToScreen={goToScreen}
+        />
+        ) : null}
+
+        {featureArticle ? (
+        <FeatureDetailScreen
+          styles={styles}
+          article={featureArticle}
+          onGoToScreen={goToScreen}
         />
         ) : null}
 
@@ -410,6 +554,7 @@ export function AppRouter(props: AppRouterProps) {
           onOpenUserProfile={openUserProfile}
           onOpenPostDetail={openPostDetail}
           onTogglePostInteraction={(payload) => void togglePostInteraction(payload)}
+          getAuthorAvatarUrl={getAuthorAvatarUrl}
         />
         ) : null}
 
@@ -577,6 +722,7 @@ export function AppRouter(props: AppRouterProps) {
           expandedBodyIds={expandedBodyIds}
           renderPracticeMenu={renderPracticeMenu}
           renderHashtagChips={renderHashtagChips}
+          getAuthorAvatarUrl={getAuthorAvatarUrl}
           onBack={() => setCurrentScreen("top")}
           onChangeSearchQuery={setSearchQuery}
           onChangeSearchTab={setActiveSearchTab}
@@ -804,28 +950,7 @@ export function AppRouter(props: AppRouterProps) {
           title="プライバシーポリシー"
           description="Komonity における個人情報の取扱い方針です。"
           onBack={() => setCurrentScreen("top")}
-          sections={[
-            {
-              title: "1. 取得する情報",
-              body: "アカウント登録時のメールアドレス、表示名、プロフィール情報、投稿内容、返信内容、通報やお問い合わせ内容など、サービス提供に必要な情報を取得します。",
-            },
-            {
-              title: "2. 利用目的",
-              body: "アカウント管理、投稿機能の提供、本人確認や不正利用対策、お問い合わせ対応、重要なお知らせの通知のために利用します。",
-            },
-            {
-              title: "3. 第三者提供",
-              body: "法令に基づく場合を除き、本人の同意なく第三者へ個人情報を提供しません。公開プロフィールとして登録された情報は、サービス利用者から閲覧できる場合があります。",
-            },
-            {
-              title: "4. 安全管理",
-              body: "アクセス制御やルール設定など、個人情報の漏えい・改ざん・不正アクセスを防ぐために必要な措置を講じます。",
-            },
-            {
-              title: "5. お問い合わせ",
-              body: `個人情報に関するお問い合わせは、${SUPPORT_EMAIL_ADDRESS} またはアプリ内のお問い合わせ画面からご連絡ください。`,
-            },
-          ]}
+          sections={privacyPolicySections}
         />
         ) : null}
 
@@ -835,25 +960,7 @@ export function AppRouter(props: AppRouterProps) {
           title="利用規約"
           description="Komonity を利用する際の基本的なルールです。"
           onBack={() => setCurrentScreen("top")}
-          sections={[
-            { title: "1. 適用", body: "本規約は、Komonity の利用に関する一切の関係に適用されます。" },
-            {
-              title: "2. 禁止事項",
-              body: "法令違反、公序良俗に反する行為、なりすまし、著作権や肖像権を侵害する投稿、個人情報の不適切な公開、スパム行為を禁止します。",
-            },
-            {
-              title: "3. 投稿内容",
-              body: "投稿内容の責任は投稿者にあります。運営は必要に応じて投稿の削除、アカウント制限、通報対応を行うことがあります。",
-            },
-            {
-              title: "4. 外部リンク",
-              body: "外部サイトへのリンクは利用者自身の判断でご利用ください。リンク先の内容や安全性について運営は責任を負いません。",
-            },
-            {
-              title: "5. 免責",
-              body: "サービスの完全性、継続性、特定目的への適合性を保証するものではありません。",
-            },
-          ]}
+          sections={termsSections}
         />
         ) : null}
       </View>

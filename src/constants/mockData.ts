@@ -7,6 +7,14 @@ import type {
   TodayMenuConditionKey,
   UserDirectoryMeta,
 } from "../types/app";
+import {
+  OFFICIAL_OUTDOOR_SPORTS,
+  OFFICIAL_POST_SCHEDULES,
+  getOfficialMenuAccountName,
+  getOfficialStrategyAccountName,
+  type OfficialContentKind,
+  type OfficialMenuEnvironment,
+} from "./officialContent";
 
 const sports = [
   "サッカー",
@@ -1158,6 +1166,8 @@ const communitySeeds: CommunitySeed[] = [
 
 const mockStartTime = Date.UTC(2026, 3, 21, 8, 13, 27);
 const mockEndTime = Date.UTC(2026, 4, 31, 21, 42, 17);
+const jstOffsetMs = 9 * 60 * 60 * 1000;
+const outdoorSportSet = new Set<string>(OFFICIAL_OUTDOOR_SPORTS);
 
 const pick = <T,>(items: readonly T[], index: number) => items[index % items.length];
 const pad = (value: number) => String(value).padStart(3, "0");
@@ -1173,6 +1183,86 @@ const createMockTimestamp = (index: number, total: number, offsetMinutes = 0) =>
   return base - jitter;
 };
 
+const getJapanWeekday = (date: Date) =>
+  new Date(date.getTime() + jstOffsetMs).getUTCDay();
+
+const moveBackToAllowedJapanWeekday = (
+  date: Date,
+  weekdays: readonly number[]
+) => {
+  const nextDate = new Date(date.getTime());
+
+  while (!weekdays.includes(getJapanWeekday(nextDate))) {
+    nextDate.setUTCDate(nextDate.getUTCDate() - 1);
+  }
+
+  return nextDate;
+};
+
+const setJapanClock = (
+  date: Date,
+  hour: number,
+  minute: number,
+  second: number
+) => {
+  const japanDate = new Date(date.getTime() + jstOffsetMs);
+
+  return Date.UTC(
+    japanDate.getUTCFullYear(),
+    japanDate.getUTCMonth(),
+    japanDate.getUTCDate(),
+    hour - 9,
+    minute,
+    second
+  );
+};
+
+/**
+ * 公式投稿の時刻ルールに沿ったモック日時を作ります。
+ * 投稿ごとの分・秒はずらし、機械的な「ぴったり投稿」に見えないようにしています。
+ */
+const createOfficialMockTimestamp = (
+  index: number,
+  total: number,
+  kind: OfficialContentKind,
+  offsetMinutes = 0
+) => {
+  const schedules = OFFICIAL_POST_SCHEDULES.filter(
+    (schedule) => schedule.kind === kind
+  );
+  const schedule = pick(schedules, index + offsetMinutes);
+  const baseDate = new Date(createMockTimestamp(index, total, offsetMinutes));
+  const scheduledDate = moveBackToAllowedJapanWeekday(
+    baseDate,
+    schedule.weekdays
+  );
+  const [minuteStart, minuteEnd] = schedule.minuteWindow;
+  const minute = minuteStart + ((index * 7 + offsetMinutes) % (minuteEnd - minuteStart + 1));
+  const second = (index * 13 + offsetMinutes * 3) % 60;
+
+  return setJapanClock(scheduledDate, schedule.hour, minute, second);
+};
+
+const getMenuEnvironmentForSport = (
+  sport: string,
+  index: number,
+  conditionTags: readonly TodayMenuConditionKey[] = []
+): OfficialMenuEnvironment => {
+  if (!outdoorSportSet.has(sport)) {
+    return "normal";
+  }
+
+  if (conditionTags.includes("rainy") || index % 5 === 0) {
+    return "rainy";
+  }
+
+  if (index % 2 === 0) {
+    return "outdoor";
+  }
+
+  return "normal";
+};
+
 const accountBelongsToSport = (account: SearchAccountItem, sport: string) =>
   account.name.includes(sport) || account.bio.includes(`${sport}を`);
 
@@ -1180,7 +1270,26 @@ const accountBelongsToSport = (account: SearchAccountItem, sport: string) =>
  * モック投稿の投稿者を、投稿種目と主担当が一致する指導者から選びます。
  * selectedSports には「見ておきたい種目」も含まれるため、投稿者選定では使いすぎないようにします。
  */
-const pickCoachForSport = (sport: string, index: number) => {
+const pickCoachForSport = (
+  sport: string,
+  index: number,
+  kind?: OfficialContentKind,
+  menuEnvironment: OfficialMenuEnvironment = "normal"
+) => {
+  const officialName =
+    kind === "strategy"
+      ? getOfficialStrategyAccountName(sport)
+      : kind === "menu"
+        ? getOfficialMenuAccountName(sport, menuEnvironment)
+        : "";
+  const exactOfficialCoaches = officialName
+    ? mockCoachAccounts.filter((account) => account.name === officialName)
+    : [];
+
+  if (exactOfficialCoaches.length > 0) {
+    return pick(exactOfficialCoaches, index);
+  }
+
   const matchedCoaches = mockCoachAccounts.filter((account) =>
     accountBelongsToSport(account, sport)
   );
@@ -1208,27 +1317,42 @@ export const mockCoachAccounts: SearchAccountItem[] = Array.from({ length: 100 }
   const number = index + 1;
   const sportA = pick(sports, index);
   const sportB = pick(sports, index + 5);
-  const region = pick(regions, index);
   const profileLabel = pick(coachProfileLabels, index + 2);
-  const displayName =
-    index % 5 === 0
-      ? `Komonity公式${sportA}教室`
-      : `Komonity公式${sportA}${profileLabel}`;
-  const handleBase = toHandleText(`${region}_${sportA}_${profileLabel}`);
+  const isStrategyAccount = index % 3 === 1;
+  const menuEnvironment = getMenuEnvironmentForSport(sportA, index);
+  const accountTopic = isStrategyAccount
+    ? "戦術"
+    : menuEnvironment === "rainy"
+      ? "雨天練習メニュー"
+      : menuEnvironment === "outdoor"
+        ? "外練習メニュー"
+        : "練習メニュー";
+  const displayName = isStrategyAccount
+    ? getOfficialStrategyAccountName(sportA)
+    : getOfficialMenuAccountName(sportA, menuEnvironment);
+  const handleBase = toHandleText(
+    `komonity_${sportA}_${accountTopic}_${profileLabel}`
+  );
 
   return {
     id: `mock-coach-${pad(number)}`,
     name: displayName,
     handle: `@${handleBase}_${pad(number)}`,
-    bio: `${sportA}を中心に、顧問の先生がそのまま使いやすい練習設計と声かけ例を発信しています。`,
+    bio: isStrategyAccount
+      ? `${sportA}の試合で使う判断基準、配置、声かけを顧問の先生向けに整理して発信しています。`
+      : `${sportA}の${accountTopic}を中心に、顧問の先生がそのまま使いやすい手順と注意点を発信しています。`,
     followers: "0",
     featured: index < 12,
     role: index % 9 === 0 ? "指導員組織アカウント" : "指導員アカウント",
     selectedSports: Array.from(new Set([sportA, sportB])),
-    strengths: `${sportA}の基礎づくり、短時間メニュー、試合前の確認`,
-    supportTopics: "初心者対応、人数差がある日の運営、怪我予防、練習のマンネリ解消",
+    strengths: isStrategyAccount
+      ? `${sportA}の局面整理、役割分担、試合前ミーティング`
+      : `${sportA}の朝練設計、午後練メニュー、週末練習の組み立て`,
+    supportTopics: isStrategyAccount
+      ? "試合中の判断、配置のズレ、声かけ、相手への対応"
+      : "初心者対応、人数差がある日の運営、雨天時対応、怪我予防",
     certifications: index % 3 === 0 ? "公認指導者資格 / 救急講習修了" : "地域クラブ指導経験あり",
-    organization: index % 4 === 0 ? `Komonity公式${sportA}スクール` : "",
+    organization: `Komonity公式${sportA}${isStrategyAccount ? "戦術ラボ" : "練習メニューラボ"}`,
     youtubeUrl: index % 5 === 0 ? `https://example.com/youtube/mock-coach-${number}` : "",
     xUrl: index % 4 === 0 ? `https://example.com/x/mock-coach-${number}` : "",
     instagramUrl: index % 6 === 0 ? `https://example.com/instagram/mock-coach-${number}` : "",
@@ -1298,7 +1422,12 @@ export const mockDirectoryMetaMap: Record<string, UserDirectoryMeta> =
 
 const mockMenuFeedPosts: FeedPost[] = Array.from({ length: 190 }, (_, index) => {
   const seed = pick(practiceMenuSeeds, index);
-  const coach = pickCoachForSport(seed.sport, index);
+  const menuEnvironment = getMenuEnvironmentForSport(
+    seed.sport,
+    index,
+    seed.conditionTags
+  );
+  const coach = pickCoachForSport(seed.sport, index, "menu", menuEnvironment);
   const advisor = pickAdvisorForSport(seed.sport, index);
   const scenario = pick(scenarioLabels, index);
   const naturalTags = Array.from(new Set([seed.sport, ...seed.tags]));
@@ -1341,13 +1470,13 @@ const mockMenuFeedPosts: FeedPost[] = Array.from({ length: 190 }, (_, index) => 
       arrangements: seed.arrangements,
       conditionTags: seed.conditionTags,
     },
-    createdAtMs: createMockTimestamp(index, 190),
+    createdAtMs: createOfficialMockTimestamp(index, 190, "menu"),
   };
 });
 
 const mockStrategyFeedPosts: FeedPost[] = Array.from({ length: 150 }, (_, index) => {
   const seed = pick(practiceStrategySeeds, index);
-  const coach = pickCoachForSport(seed.sport, index * 2);
+  const coach = pickCoachForSport(seed.sport, index * 2, "strategy");
   const advisor = pickAdvisorForSport(seed.sport, index + 11);
   const naturalTags = Array.from(new Set([seed.sport, ...seed.tags]));
 
@@ -1390,7 +1519,7 @@ const mockStrategyFeedPosts: FeedPost[] = Array.from({ length: 150 }, (_, index)
       commonMistakes: seed.commonMistakes,
       practiceDrill: seed.practiceDrill,
     },
-    createdAtMs: createMockTimestamp(index, 150, 17),
+    createdAtMs: createOfficialMockTimestamp(index, 150, "strategy", 17),
   };
 });
 

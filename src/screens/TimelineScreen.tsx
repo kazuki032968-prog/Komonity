@@ -4,7 +4,7 @@ import type { User } from "firebase/auth";
 
 import { COLLECTIONS } from "../constants/app";
 import {
-  DefaultAvatarIcon,
+  AvatarVisual,
   ExpandableBody,
   MediaGallery,
   PageIntro,
@@ -59,6 +59,7 @@ export function TimelineScreen({
   onOpenExternalUrl,
   onTogglePostInteraction,
   renderHashtagChips,
+  getAuthorAvatarUrl,
 }: {
   styles: SharedStyles;
   authUser: User | null;
@@ -94,6 +95,7 @@ export function TimelineScreen({
     detail: PostDetailState;
   }) => void;
   renderHashtagChips: (tags: string[]) => ReactNode;
+  getAuthorAvatarUrl: (payload: { uid?: string; name?: string }) => string;
 }) {
   return (
     <View style={[styles.pageContainer, styles.timelineScreen]}>
@@ -167,7 +169,13 @@ export function TimelineScreen({
                         }
                       >
                         <View style={styles.authorAvatar}>
-                          <DefaultAvatarIcon size={28} />
+                          <AvatarVisual
+                            size={28}
+                            imageUri={getAuthorAvatarUrl({
+                              uid: item.createdByUid,
+                              name: item.author,
+                            })}
+                          />
                         </View>
                         <View style={styles.authorTextBlock}>
                           <Text style={styles.authorName}>{item.author}</Text>
@@ -254,7 +262,13 @@ export function TimelineScreen({
                         }
                       >
                         <View style={styles.authorAvatar}>
-                          <DefaultAvatarIcon size={28} />
+                          <AvatarVisual
+                            size={28}
+                            imageUri={getAuthorAvatarUrl({
+                              uid: post.createdByUid,
+                              name: post.author,
+                            })}
+                          />
                         </View>
                         <View style={styles.authorTextBlock}>
                           <Text style={styles.authorName}>{post.author}</Text>
@@ -344,18 +358,9 @@ export function TimelineScreen({
                 const questionDisplay = extractDisplayBodyAndTags(question.body);
                 return (
                   <View key={question.id} style={styles.questionCard}>
-                    <Pressable
-                      style={styles.detailTapArea}
-                      onPress={() =>
-                        onOpenPostDetail({
-                          detail: buildQuestionDetail(question),
-                          backScreen: "top",
-                        })
-                      }
-                    >
-                      <Text style={styles.categoryText}>{question.category}</Text>
-                      <Text style={styles.cardTitle}>{question.title}</Text>
+                    <View style={styles.postHeader}>
                       <Pressable
+                        style={styles.authorRow}
                         onPress={() =>
                           onOpenUserProfile({
                             uid: question.createdByUid,
@@ -366,10 +371,36 @@ export function TimelineScreen({
                           })
                         }
                       >
-                        <Text style={styles.cardMeta}>
-                          投稿者: {question.author} ・ 回答数 {question.answers}
-                        </Text>
+                        <View style={styles.authorAvatar}>
+                          <AvatarVisual
+                            size={28}
+                            imageUri={getAuthorAvatarUrl({
+                              uid: question.createdByUid,
+                              name: question.author,
+                            })}
+                          />
+                        </View>
+                        <View style={styles.authorTextBlock}>
+                          <Text style={styles.authorName}>{question.author}</Text>
+                          <Text style={styles.cardMeta}>
+                            顧問アカウント ・ 回答数 {question.answers}
+                          </Text>
+                        </View>
                       </Pressable>
+                      <View style={styles.pill}>
+                        <Text style={styles.pillText}>{question.category}</Text>
+                      </View>
+                    </View>
+                    <Pressable
+                      style={styles.detailTapArea}
+                      onPress={() =>
+                        onOpenPostDetail({
+                          detail: buildQuestionDetail(question),
+                          backScreen: "top",
+                        })
+                      }
+                    >
+                      <Text style={styles.cardTitle}>{question.title}</Text>
                       {questionDisplay.bodyText ? (
                         <ExpandableBody
                           id={`questions:${question.id}`}
@@ -410,6 +441,33 @@ export function TimelineScreen({
                 const communityDisplay = extractDisplayBodyAndTags(item.body);
                 return (
                   <View key={item.id} style={styles.communityCard}>
+                    <View style={styles.postHeader}>
+                      <Pressable
+                        style={styles.authorRow}
+                        onPress={() =>
+                          onOpenUserProfile({
+                            uid: item.createdByUid,
+                            name: item.author,
+                            role: "コミュニティ運営",
+                            handle: item.authorHandle,
+                          })
+                        }
+                      >
+                        <View style={styles.authorAvatar}>
+                          <AvatarVisual
+                            size={28}
+                            imageUri={getAuthorAvatarUrl({
+                              uid: item.createdByUid,
+                              name: item.author,
+                            })}
+                          />
+                        </View>
+                        <View style={styles.authorTextBlock}>
+                          <Text style={styles.authorName}>{item.author}</Text>
+                          <Text style={styles.cardMeta}>コミュニティ投稿</Text>
+                        </View>
+                      </Pressable>
+                    </View>
                     <Pressable
                       style={styles.detailTapArea}
                       onPress={() =>
@@ -420,18 +478,6 @@ export function TimelineScreen({
                       }
                     >
                       <Text style={styles.cardTitle}>{item.title}</Text>
-                      <Pressable
-                        onPress={() =>
-                          onOpenUserProfile({
-                            uid: item.createdByUid,
-                            name: item.author,
-                            role: "コミュニティ運営",
-                            handle: item.authorHandle,
-                          })
-                        }
-                      >
-                        <Text style={styles.cardMeta}>投稿者: {item.author}</Text>
-                      </Pressable>
                       {communityDisplay.bodyText ? (
                         <ExpandableBody
                           id={`community:${item.id}`}
@@ -504,7 +550,13 @@ export function TimelineScreen({
                         }
                       >
                         <View style={styles.authorAvatar}>
-                          <DefaultAvatarIcon size={28} />
+                          <AvatarVisual
+                            size={28}
+                            imageUri={getAuthorAvatarUrl({
+                              uid: post.createdByUid,
+                              name: post.author,
+                            })}
+                          />
                         </View>
                         <View style={styles.authorTextBlock}>
                           <Text style={styles.authorName}>{post.author}</Text>

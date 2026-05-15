@@ -8,7 +8,6 @@ import {
 } from "../constants/app";
 import {
   AvatarVisual,
-  DefaultAvatarIcon,
   ExpandableBody,
   MediaGallery,
   ReplyList,
@@ -97,6 +96,7 @@ export function SearchScreen({
   onToggleFollowProfile,
   onToggleExpandedBody,
   onOpenExternalUrl,
+  getAuthorAvatarUrl,
 }: {
   styles: SharedStyles;
   searchQuery: string;
@@ -124,9 +124,14 @@ export function SearchScreen({
   onToggleFollowProfile: (payload: { targetUid: string; targetName: string }) => void;
   onToggleExpandedBody: (id: string) => void;
   onOpenExternalUrl: (url: string, label?: string) => void;
+  getAuthorAvatarUrl: (payload: { uid?: string; name?: string }) => string;
 }) {
   const renderPostResult = (post: SearchContentItem, meta: string) => {
     const display = extractDisplayBodyAndTags(post.body);
+    const authorAvatarUrl = getAuthorAvatarUrl({
+      uid: post.createdByUid,
+      name: post.author,
+    });
 
     return (
       <View key={post.id} style={styles.searchPostCard}>
@@ -139,11 +144,15 @@ export function SearchScreen({
                 name: post.author,
                 role: post.role,
                 handle: post.authorHandle,
+                avatarUrl: authorAvatarUrl,
                 selectedSports: post.sports,
               })
             }
           >
-            <DefaultAvatarIcon size={28} />
+            <AvatarVisual
+              size={52}
+              imageUri={authorAvatarUrl}
+            />
           </Pressable>
           <View style={styles.searchPostBody}>
             <Pressable
@@ -153,6 +162,7 @@ export function SearchScreen({
                   name: post.author,
                   role: post.role,
                   handle: post.authorHandle,
+                  avatarUrl: authorAvatarUrl,
                   selectedSports: post.sports,
                 })
               }

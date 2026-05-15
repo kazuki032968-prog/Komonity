@@ -6,7 +6,7 @@ import { buildFeedDetail } from "../../services/postService";
 import { extractDisplayBodyAndTags } from "../../utils/appUtils";
 import type { FeedPost, PostDetailState, ScreenKey } from "../../types/app";
 import {
-  DefaultAvatarIcon,
+  AvatarVisual,
   ExpandableBody,
   MediaGallery,
   ReplyList,
@@ -31,6 +31,7 @@ export function FeedPostCard({
   backScreen,
   renderHashtagChips,
   renderPracticeMenu,
+  getAuthorAvatarUrl,
   onToggleExpanded,
   onOpenUrl,
   onOpenUserProfile,
@@ -52,6 +53,7 @@ export function FeedPostCard({
     menu: FeedPost["practiceMenu"],
     strategy?: FeedPost["strategyTemplate"]
   ) => ReactNode;
+  getAuthorAvatarUrl: (payload: { uid?: string; name?: string }) => string;
   onToggleExpanded: (id: string) => void;
   onOpenUrl: (url: string, label?: string) => void;
   onOpenUserProfile: (profile: {
@@ -89,7 +91,13 @@ export function FeedPostCard({
           }
         >
           <View style={styles.authorAvatar}>
-            <DefaultAvatarIcon size={28} />
+            <AvatarVisual
+              size={28}
+              imageUri={getAuthorAvatarUrl({
+                uid: post.createdByUid,
+                name: post.author,
+              })}
+            />
           </View>
           <View style={styles.authorTextBlock}>
             <Text style={styles.authorName}>{post.author}</Text>

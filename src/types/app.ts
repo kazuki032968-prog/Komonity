@@ -1,6 +1,26 @@
 export type ScreenKey =
   | "top"
   | "service-detail"
+  | "for-advisors"
+  | "for-coaches"
+  | "coach-marketing"
+  | "practice-menu-search"
+  | "practice-menu-soccer"
+  | "practice-menu-baseball"
+  | "practice-menu-basketball"
+  | "practice-menu-tennis"
+  | "practice-menu-brass-band"
+  | "practice-menu-rainy-day"
+  | "practice-menu-60-minutes"
+  | "practice-menu-beginner"
+  | "practice-menu-tournament-prep"
+  | "features"
+  | "feature-practice-menu-template"
+  | "feature-today-practice-menu-search"
+  | "feature-coach-profile"
+  | "feature-badge-trust-score"
+  | "feature-advisor-consultation"
+  | "feature-rainy-day-practice"
   | "feed"
   | "post-detail"
   | "reply-detail"
@@ -23,6 +43,46 @@ export type ScreenKey =
   | "contact"
   | "privacy-policy"
   | "terms";
+
+export type SeoLandingPageSection = {
+  title: string;
+  body: string;
+  points: string[];
+};
+
+export type SeoLandingPageConfig = {
+  screen: ScreenKey;
+  path: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  primaryKeywords: string[];
+  heroBullets: string[];
+  sections: SeoLandingPageSection[];
+  ctaLabel: string;
+  ctaScreen: ScreenKey;
+  secondaryCtaLabel?: string;
+  secondaryCtaScreen?: ScreenKey;
+};
+
+export type FeatureArticleSection = {
+  title: string;
+  body: string;
+  points: string[];
+};
+
+export type FeatureArticleConfig = {
+  screen: ScreenKey;
+  path: string;
+  category: string;
+  title: string;
+  description: string;
+  lead: string;
+  keywords: string[];
+  updatedAt: string;
+  sections: FeatureArticleSection[];
+  relatedLinks: Array<{ label: string; screen: ScreenKey }>;
+};
 
 export type ExternalLink = {
   id: string;

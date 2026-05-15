@@ -11,48 +11,103 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/timeline/all</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://komonity-510b7.web.app/for-advisors</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/timeline/menu-strategy</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://komonity-510b7.web.app/for-coaches</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/coach-marketing</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/timeline/questions</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://komonity-510b7.web.app/practice-menu-search</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/soccer</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/timeline/community</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://komonity-510b7.web.app/featured-coaches</loc>
-    <changefreq>daily</changefreq>
+    <loc>https://komonity-510b7.web.app/practice-menu/baseball</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/search</loc>
+    <loc>https://komonity-510b7.web.app/practice-menu/basketball</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/tennis</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/brass-band</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/rainy-day</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/60-minutes</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/beginner</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/practice-menu/tournament-prep</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/features</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/features/practice-menu-template</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/features/today-practice-menu-search</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/features/coach-profile</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://komonity-510b7.web.app/features/badge-trust-score</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/register</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://komonity-510b7.web.app/features/advisor-consultation</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://komonity-510b7.web.app/register/advisor</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://komonity-510b7.web.app/register/coach</loc>
-    <changefreq>monthly</changefreq>
+    <loc>https://komonity-510b7.web.app/features/rainy-day-practice</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>

@@ -54,25 +54,67 @@ export function ServiceDetailScreen({
           {authUser ? <Pressable style={styles.ghostButton} onPress={onLogout}><Text style={styles.ghostButtonText}>ログアウト</Text></Pressable> : <Pressable style={styles.ghostButton} onPress={() => onGoToScreen("login")}><Text style={styles.ghostButtonText}>ログイン</Text></Pressable>}
         </View>
         <View style={styles.flowCard}>
-          <Text style={styles.flowTitle}>先行公開中です</Text>
+          <Text style={styles.flowTitle}>現場で使える知見を整理して蓄積します</Text>
           <Text style={styles.flowText}>
-            Komonity は現在、開発・改修を進めながら先行公開中です。いただいた意見をもとに、
-            使いやすさと安心感を高める改善を続けています。
+            投稿は種目、対象レベル、練習時間、必要な道具、目的、手順、注意点などを整理して共有できます。
+            顧問の先生がそのまま部活で試しやすい形で、練習メニューや戦術を探せます。
           </Text>
-          <Text style={styles.flowHint}>投稿数や数値が少ない箇所も、立ち上げ期として育てている最中です。</Text>
+          <Text style={styles.flowHint}>
+            単なる投稿一覧ではなく、部活現場で再利用しやすいナレッジとして残せることを重視しています。
+          </Text>
         </View>
         <View style={styles.flowCard}>
-          <Text style={styles.flowTitle}>現在、先行して指導者・経験者の方を募集しています</Text>
+          <Text style={styles.flowTitle}>指導者・経験者の専門性が伝わる場です</Text>
           <Text style={styles.flowText}>
             競技経験のある方、スクールで教えている方、練習メニューや戦術を伝えられる方、
-            ストレッチや怪我予防の知識がある方の参加を歓迎しています。
+            ストレッチや怪我予防の知識がある方が、自分の知見をプロフィールや投稿で届けられます。
           </Text>
-          <Text style={styles.flowHint}>まずは知見を届けてくださる指導者の方と一緒に土台を育てていきたい段階です。</Text>
+          <Text style={styles.flowHint}>
+            プロフィール、活動バッジ、回答実績を通じて、顧問の先生に専門性が伝わる設計です。
+          </Text>
         </View>
       </View>
 
       {authMessage ? <FeedbackBanner kind="success" message={authMessage} styles={styles} /> : null}
       {authError ? <FeedbackBanner kind="error" message={authError} styles={styles} /> : null}
+
+      <View style={styles.heroCard}>
+        <Text style={styles.eyebrow}>目的別に詳しく見る</Text>
+        <Text style={styles.sectionTitle}>検索されやすいテーマを特集ページにまとめています</Text>
+        <Text style={styles.heroText}>
+          顧問の先生が探しやすい練習メニュー検索、指導者が登録する意味を感じやすいプロフィール設計、
+          活動バッジと信頼スコアの考え方を詳しく整理しました。
+        </Text>
+        <View style={styles.topShortcutGrid}>
+          {[
+            {
+              label: "練習メニュー投稿テンプレ",
+              screen: "feature-practice-menu-template" as ScreenKey,
+            },
+            {
+              label: "今日の練習メニュー検索",
+              screen: "feature-today-practice-menu-search" as ScreenKey,
+            },
+            {
+              label: "指導者プロフィール強化",
+              screen: "feature-coach-profile" as ScreenKey,
+            },
+            {
+              label: "メダル・信頼スコア",
+              screen: "feature-badge-trust-score" as ScreenKey,
+            },
+          ].map((item) => (
+            <Pressable
+              key={item.screen}
+              style={styles.shortcutCard}
+              onPress={() => onGoToScreen(item.screen)}
+            >
+              <Text style={styles.shortcutTitle}>{item.label}</Text>
+              <Text style={styles.shortcutText}>詳しく見る</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
 
       <View style={styles.topShortcutGrid}>
         <View style={styles.shortcutCard}>
