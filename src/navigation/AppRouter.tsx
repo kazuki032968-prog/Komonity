@@ -289,6 +289,7 @@ export function AppRouter(props: AppRouterProps) {
     togglePostInteraction,
     renderHashtagChips,
     getAuthorAvatarUrl,
+    openSearchWithPreset,
     overviewStats,
     handleLogout,
     renderPracticeMenu,
@@ -527,6 +528,7 @@ export function AppRouter(props: AppRouterProps) {
           styles={styles}
           articles={featureArticles}
           onGoToScreen={goToScreen}
+          onOpenSearchPreset={openSearchWithPreset}
         />
         ) : null}
 
@@ -535,6 +537,7 @@ export function AppRouter(props: AppRouterProps) {
           styles={styles}
           article={featureArticle}
           onGoToScreen={goToScreen}
+          onOpenSearchPreset={openSearchWithPreset}
         />
         ) : null}
 

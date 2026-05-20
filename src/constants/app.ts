@@ -347,6 +347,25 @@ export const todayMenuConditionOptions: Array<{
   { key: "mixedAbility", label: "体力差あり", description: "差があっても回しやすい" },
 ];
 
+export const todayMenuAdvancedConditionOptions: Array<{
+  key: TodayMenuConditionKey;
+  label: string;
+  description: string;
+}> = [
+  { key: "fewPeople", label: "少人数", description: "人数が少ない日向け" },
+  { key: "juniorHigh", label: "中学生", description: "中学生に合わせやすい" },
+  { key: "highSchool", label: "高校生", description: "高校生に合わせやすい" },
+  { key: "basicPractice", label: "基礎づくり", description: "基本動作を固める" },
+  { key: "injuryPrevention", label: "怪我予防", description: "ケアやフォーム確認" },
+  { key: "teamwork", label: "チーム連携", description: "役割や声かけを整理" },
+  { key: "warmup", label: "ウォームアップ", description: "練習前の導入に使いやすい" },
+  { key: "stamina", label: "体力づくり", description: "走力や持久力を高める" },
+  { key: "defense", label: "守備強化", description: "守備やカバーを整理" },
+  { key: "offense", label: "攻撃づくり", description: "得点や崩しを練習" },
+  { key: "smallSpace", label: "省スペース", description: "狭い場所でも実施しやすい" },
+  { key: "gameSituation", label: "実戦形式", description: "試合に近い状況で練習" },
+];
+
 export const initialComposeState: ComposeState = {
   target: "feed",
   feedKind: "menu",
@@ -867,6 +886,8 @@ export const featureArticles: FeatureArticleConfig[] = [
     ],
     relatedLinks: [
       { label: "今日の練習メニュー検索", screen: "feature-today-practice-menu-search" },
+      { label: "60分練習の組み立て方", screen: "feature-60-minute-practice" },
+      { label: "初心者向け練習特集", screen: "feature-beginner-practice" },
       { label: "顧問の先生向けページ", screen: "for-advisors" },
     ],
   },
@@ -907,6 +928,126 @@ export const featureArticles: FeatureArticleConfig[] = [
     relatedLinks: [
       { label: "練習メニュー検索ページ", screen: "practice-menu-search" },
       { label: "雨の日練習特集", screen: "feature-rainy-day-practice" },
+      { label: "60分練習の組み立て方", screen: "feature-60-minute-practice" },
+      { label: "初心者向け練習特集", screen: "feature-beginner-practice" },
+      { label: "少人数・省スペース練習", screen: "feature-small-space-practice" },
+    ],
+  },
+  {
+    screen: "feature-60-minute-practice",
+    path: "/features/60-minute-practice",
+    category: "60分練習設計",
+    title: "放課後60分で回せる部活練習メニューの組み立て方",
+    description:
+      "ウォームアップ、基礎づくり、守備強化、攻撃づくり、実戦形式、振り返りを60分に収めるための考え方を整理します。",
+    lead: "放課後の練習時間が短い日でも、目的を絞れば十分に成果を出せます。60分をどう区切るか、何を削るか、どこを検索で補うかをまとめます。",
+    keywords: [
+      "60分 練習メニュー",
+      "放課後 練習メニュー",
+      "短時間 部活 練習",
+      "部活 時短練習",
+      "実戦形式 練習",
+    ],
+    updatedAt: "2026年5月18日",
+    sections: [
+      {
+        title: "60分を4つのブロックに分ける",
+        body: "最初の10分でウォームアップ、次の20分で基礎、次の20分で今日のテーマ、最後の10分で実戦形式または振り返りにすると、説明が長引いても崩れにくくなります。",
+        points: ["ウォームアップ", "基礎づくり", "実戦形式", "振り返り"],
+      },
+      {
+        title: "移動と準備で時間を溶かさない",
+        body: "コートを大きく作り替える練習を避け、半面や省スペースで回せるメニューを選ぶと、活動時間を確保しやすくなります。",
+        points: ["省スペース", "道具不足", "タイマー", "少人数"],
+      },
+      {
+        title: "仕上げは1テーマに絞る",
+        body: "守備強化、攻撃づくり、大会前の確認など、最後に見たい成果を1つに絞ると、短時間でも生徒に狙いが伝わります。",
+        points: ["守備強化", "攻撃づくり", "大会前"],
+      },
+    ],
+    relatedLinks: [
+      { label: "今日の練習メニュー検索", screen: "feature-today-practice-menu-search" },
+      { label: "練習メニュー投稿テンプレ", screen: "feature-practice-menu-template" },
+      { label: "初心者向け練習特集", screen: "feature-beginner-practice" },
+    ],
+  },
+  {
+    screen: "feature-beginner-practice",
+    path: "/features/beginner-practice",
+    category: "初心者指導",
+    title: "初心者が多い部活で最初に整えたい練習メニュー",
+    description:
+      "初心者が多い部活で、基礎づくり、怪我予防、経験者との体力差、チーム連携をどう扱うかを整理します。",
+    lead: "初心者が多い日は、難しいメニューを薄くやるより、成功基準を小さくして反復しやすい形にする方が伸びやすくなります。",
+    keywords: [
+      "初心者 練習メニュー",
+      "部活 初心者 指導",
+      "基礎練習 メニュー",
+      "体力差 部活",
+      "怪我予防 練習",
+    ],
+    updatedAt: "2026年5月18日",
+    sections: [
+      {
+        title: "最初は成功基準を小さくする",
+        body: "フォーム、姿勢、足運び、声かけなど、今日できるようになってほしい動作を1つに絞ると、初心者も経験者も振り返りやすくなります。",
+        points: ["初心者", "基礎づくり", "フォーム確認"],
+      },
+      {
+        title: "経験者と初心者を同時に動かす",
+        body: "経験者には条件を追加し、初心者には距離や速度を下げるなど、同じ練習の中で難易度を分けると待ち時間が減ります。",
+        points: ["体力差", "チーム連携", "少人数"],
+      },
+      {
+        title: "怪我予防を練習の一部にする",
+        body: "ウォームアップ、可動域、フォーム確認を最初からメニューに入れておくと、初心者が無理をして崩れるリスクを減らせます。",
+        points: ["怪我予防", "ウォームアップ", "中学生", "高校生"],
+      },
+    ],
+    relatedLinks: [
+      { label: "今日の練習メニュー検索", screen: "feature-today-practice-menu-search" },
+      { label: "顧問の相談投稿の作り方", screen: "feature-advisor-consultation" },
+      { label: "60分練習の組み立て方", screen: "feature-60-minute-practice" },
+    ],
+  },
+  {
+    screen: "feature-small-space-practice",
+    path: "/features/small-space-practice",
+    category: "少人数・省スペース練習",
+    title: "少人数・狭い場所でも成立する部活練習メニュー",
+    description:
+      "少人数、半面、教室、廊下、道具が少ない日でも練習の質を落とさないためのメニュー設計をまとめます。",
+    lead: "人数や場所が足りない日は、できないことを数えるより、役割を増やして反復の密度を上げるチャンスにできます。",
+    keywords: [
+      "少人数 練習メニュー",
+      "省スペース 練習",
+      "道具が少ない 練習",
+      "室内 部活 練習",
+      "半面 練習メニュー",
+    ],
+    updatedAt: "2026年5月18日",
+    sections: [
+      {
+        title: "人数が少ない日は役割を増やす",
+        body: "プレーヤーだけでなく、記録係、声かけ係、観察係を作ると、少人数でも学びが止まりにくくなります。",
+        points: ["少人数", "チーム連携", "役割"],
+      },
+      {
+        title: "狭い場所では安全と目的を先に決める",
+        body: "省スペースでは強度を上げすぎず、守備の構え、攻撃の判断、フォーム確認など、接触が少ないテーマへ切り替えます。",
+        points: ["省スペース", "室内", "守備強化", "攻撃づくり"],
+      },
+      {
+        title: "最後は実戦形式へ接続する",
+        body: "基礎練習で終わらず、ミニゲーム、ケース練習、判断練習へつなぐと、限られた環境でも本番に近い学びになります。",
+        points: ["実戦形式", "判断", "大会前"],
+      },
+    ],
+    relatedLinks: [
+      { label: "雨の日練習特集", screen: "feature-rainy-day-practice" },
+      { label: "今日の練習メニュー検索", screen: "feature-today-practice-menu-search" },
+      { label: "60分練習の組み立て方", screen: "feature-60-minute-practice" },
     ],
   },
   {
@@ -1047,6 +1188,7 @@ export const featureArticles: FeatureArticleConfig[] = [
     relatedLinks: [
       { label: "雨の日メニュー検索", screen: "practice-menu-rainy-day" },
       { label: "今日の練習メニュー検索", screen: "feature-today-practice-menu-search" },
+      { label: "少人数・省スペース練習", screen: "feature-small-space-practice" },
     ],
   },
 ];
@@ -1082,6 +1224,9 @@ export const staticScreenPathMap: Partial<Record<ScreenKey, string>> = {
   "feature-badge-trust-score": "/features/badge-trust-score",
   "feature-advisor-consultation": "/features/advisor-consultation",
   "feature-rainy-day-practice": "/features/rainy-day-practice",
+  "feature-60-minute-practice": "/features/60-minute-practice",
+  "feature-beginner-practice": "/features/beginner-practice",
+  "feature-small-space-practice": "/features/small-space-practice",
   feed: timelineSectionPathMap.feed,
   questions: timelineSectionPathMap.questions,
   community: timelineSectionPathMap.community,

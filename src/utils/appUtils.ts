@@ -18,6 +18,7 @@ import type {
   SearchAccountItem,
   SearchContentFilterKey,
   TextSelectionRange,
+  TodayMenuConditionKey,
 } from "../types/app";
 
 export const URL_REGEX = /(https?:\/\/[^\s)]+)(?![^[]*\])/giu;
@@ -534,14 +535,65 @@ export const buildReplyPath = (
 export const buildProfileUrl = (handle: string) =>
   `${getPublicSiteUrl()}${buildProfilePath(handle)}`;
 
-export const buildSearchPath = (query: string) => {
+export const buildSearchPath = (
+  query: string,
+  options: {
+    contentFilter?: SearchContentFilterKey;
+    conditions?: TodayMenuConditionKey[];
+  } = {}
+) => {
   const normalizedQuery = query.trim();
-  if (!normalizedQuery) {
+  const params = new URLSearchParams();
+
+  if (normalizedQuery) {
+    params.set("q", normalizedQuery);
+  }
+
+  if (options.contentFilter && options.contentFilter !== "all") {
+    params.set("filter", options.contentFilter);
+  }
+
+  options.conditions?.forEach((condition) => {
+    params.append("condition", condition);
+  });
+
+  const serializedParams = params.toString();
+  if (!serializedParams) {
     return "/search";
   }
 
-  return `/search?q=${encodeURIComponent(normalizedQuery)}`;
+  return `/search?${serializedParams}`;
 };
+
+const isSearchContentFilter = (
+  value: string | null
+): value is SearchContentFilterKey =>
+  value === "all" ||
+  value === "feed" ||
+  value === "questions" ||
+  value === "community";
+
+const isTodayMenuCondition = (
+  value: string
+): value is TodayMenuConditionKey =>
+  value === "under60" ||
+  value === "beginner" ||
+  value === "rainy" ||
+  value === "preTournament" ||
+  value === "fewTools" ||
+  value === "mixedAbility" ||
+  value === "fewPeople" ||
+  value === "juniorHigh" ||
+  value === "highSchool" ||
+  value === "basicPractice" ||
+  value === "injuryPrevention" ||
+  value === "teamwork" ||
+  value === "warmup" ||
+  value === "stamina" ||
+  value === "defense" ||
+  value === "offense" ||
+  value === "smallSpace" ||
+  value === "gameSituation";
 
 /**
  * 現在のブラウザ URL をアプリ内画面の状態へ変換します。
@@ -599,6 +651,9 @@ export const parseWebRoute = (pathname: string, search: string): ResolvedWebRout
     "/features/badge-trust-score": "feature-badge-trust-score",
     "/features/advisor-consultation": "feature-advisor-consultation",
     "/features/rainy-day-practice": "feature-rainy-day-practice",
+    "/features/60-minute-practice": "feature-60-minute-practice",
+    "/features/beginner-practice": "feature-beginner-practice",
+    "/features/small-space-practice": "feature-small-space-practice",
   };
   const staticScreen = staticScreenRoutes[normalizedPathname];
   if (staticScreen) {
@@ -610,10 +665,17 @@ export const parseWebRoute = (pathname: string, search: string): ResolvedWebRout
   }
 
   if (normalizedPathname === "/search") {
+    const searchContentFilter = searchParams.get("filter");
     return {
       kind: "screen",
       screen: "search",
       searchQuery: searchParams.get("q") ?? "",
+      searchContentFilter: isSearchContentFilter(searchContentFilter)
+        ? searchContentFilter
+        : undefined,
+      searchConditions: searchParams
+        .getAll("condition")
+        .filter(isTodayMenuCondition),
     };
   }
 

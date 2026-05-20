@@ -158,7 +158,16 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "ボール保持者に近づきすぎて味方同士の距離が詰まり、パスコースが消えること。",
     arrangements: "初心者が多い場合はコートを広げ、上級者には逆足限定やダイレクトパス得点を追加します。",
     tags: ["ポゼッション", "判断", "首振り"],
-    conditionTags: ["under60", "beginner", "mixedAbility"],
+    conditionTags: [
+      "under60",
+      "beginner",
+      "mixedAbility",
+      "teamwork",
+      "juniorHigh",
+      "highSchool",
+      "smallSpace",
+      "gameSituation",
+    ],
   },
   {
     sport: "サッカー",
@@ -177,7 +186,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "味方を探しすぎてシュートタイミングを逃すこと。",
     arrangements: "守備者を遅れて入れる、タッチ数を制限する、サイドからのクロス開始に変えるなどで調整できます。",
     tags: ["シュート", "2対1", "大会前"],
-    conditionTags: ["under60", "preTournament", "fewTools"],
+    conditionTags: ["under60", "preTournament", "fewTools", "offense", "gameSituation"],
   },
   {
     sport: "野球",
@@ -196,7 +205,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "腰が高いまま待ってしまい、バウンドに合わせられないこと。",
     arrangements: "雨天時は体育館で柔らかいボールを使い、捕球姿勢とステップだけに絞ります。",
     tags: ["内野守備", "基礎", "送球"],
-    conditionTags: ["beginner", "rainy", "mixedAbility"],
+    conditionTags: ["beginner", "rainy", "mixedAbility", "juniorHigh", "basicPractice", "defense"],
   },
   {
     sport: "野球",
@@ -215,7 +224,15 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "ボールに全員が寄ってしまい、二塁や本塁のカバーが空くこと。",
     arrangements: "人数が少ない場合は外野を置かず、内野と投捕の連携だけに絞ります。",
     tags: ["ケース守備", "大会前", "連携"],
-    conditionTags: ["preTournament", "under60", "mixedAbility"],
+    conditionTags: [
+      "preTournament",
+      "under60",
+      "mixedAbility",
+      "fewPeople",
+      "teamwork",
+      "defense",
+      "gameSituation",
+    ],
   },
   {
     sport: "バスケットボール",
@@ -234,7 +251,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "全員がボールへ寄り、横幅がなくなって守備に止められること。",
     arrangements: "初心者はパス回数を減らし、上級者はドリブルなしや制限時間を追加します。",
     tags: ["速攻", "3メン", "レイアップ"],
-    conditionTags: ["under60", "beginner", "fewTools"],
+    conditionTags: ["under60", "beginner", "fewTools", "offense", "stamina", "gameSituation"],
   },
   {
     sport: "バスケットボール",
@@ -253,7 +270,15 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "手だけで止めようとして足が止まること。",
     arrangements: "体力差がある場合は攻撃の選択肢を限定して成功体験を作ります。",
     tags: ["ディフェンス", "1対1", "クローズアウト"],
-    conditionTags: ["mixedAbility", "preTournament", "fewTools"],
+    conditionTags: [
+      "mixedAbility",
+      "preTournament",
+      "fewTools",
+      "highSchool",
+      "injuryPrevention",
+      "defense",
+      "gameSituation",
+    ],
   },
   {
     sport: "バレーボール",
@@ -272,7 +297,15 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "ボールを迎えにいって腕が上がり、返球が伸びすぎること。",
     arrangements: "体育館半面でもできるよう、ネットなしでターゲットマーカーへ返す形にできます。",
     tags: ["サーブレシーブ", "基礎", "初心者"],
-    conditionTags: ["beginner", "under60", "mixedAbility"],
+    conditionTags: [
+      "beginner",
+      "under60",
+      "mixedAbility",
+      "juniorHigh",
+      "basicPractice",
+      "injuryPrevention",
+      "defense",
+    ],
   },
   {
     sport: "バレーボール",
@@ -291,7 +324,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "ブロック後に止まってしまい、攻撃参加が遅れること。",
     arrangements: "人数が少ない場合は前衛2人と後衛2人だけで切り返しの形を作ります。",
     tags: ["ブロック", "切り返し", "大会前"],
-    conditionTags: ["preTournament", "mixedAbility", "under60"],
+    conditionTags: ["preTournament", "mixedAbility", "under60", "defense", "offense", "teamwork"],
   },
   {
     sport: "テニス",
@@ -310,7 +343,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "打った場所で止まり、次のボールに遅れること。",
     arrangements: "初心者はサービスラインから、上級者は左右のコース指定を細かくします。",
     tags: ["ラリー", "クロス", "フットワーク"],
-    conditionTags: ["fewTools", "mixedAbility", "under60"],
+    conditionTags: ["fewTools", "mixedAbility", "under60", "fewPeople", "smallSpace"],
   },
   {
     sport: "テニス",
@@ -329,7 +362,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "入れにいって腕だけになり、回転も深さもなくなること。",
     arrangements: "雨天時は素振りとタオルスイングで回内動作だけ確認できます。",
     tags: ["サーブ", "回転", "大会前"],
-    conditionTags: ["preTournament", "fewTools", "rainy"],
+    conditionTags: ["preTournament", "fewTools", "rainy", "offense", "warmup"],
   },
   {
     sport: "卓球",
@@ -348,7 +381,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "サーブの回転だけに集中して、次の準備が遅れること。",
     arrangements: "初心者は3球目を強打ではなくコース打ちにして成功率を上げます。",
     tags: ["サーブ", "3球目", "戦術"],
-    conditionTags: ["fewTools", "preTournament", "mixedAbility"],
+    conditionTags: ["fewTools", "preTournament", "mixedAbility", "offense", "gameSituation"],
   },
   {
     sport: "卓球",
@@ -367,7 +400,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "戻る位置が毎回違い、次の球に遅れること。",
     arrangements: "体力差が大きい場合は球数を10球単位に分け、休憩を短く挟みます。",
     tags: ["フットワーク", "多球", "基礎"],
-    conditionTags: ["under60", "beginner", "mixedAbility"],
+    conditionTags: ["under60", "beginner", "mixedAbility", "stamina", "warmup"],
   },
   {
     sport: "陸上競技",
@@ -386,7 +419,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "顔が早く上がり、上体が起きて加速が途切れること。",
     arrangements: "雨天時は廊下や体育館で5歩の姿勢確認に短縮できます。",
     tags: ["短距離", "加速", "フォーム"],
-    conditionTags: ["under60", "rainy", "fewTools"],
+    conditionTags: ["under60", "rainy", "fewTools", "stamina", "warmup", "smallSpace"],
   },
   {
     sport: "陸上競技",
@@ -405,7 +438,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "受け手が後ろを見て減速し、渡し手との距離が詰まること。",
     arrangements: "人数が少ない日は2人組で出る位置だけ反復し、動画で確認します。",
     tags: ["リレー", "バトン", "大会前"],
-    conditionTags: ["preTournament", "fewTools", "mixedAbility"],
+    conditionTags: ["preTournament", "fewTools", "mixedAbility", "stamina", "teamwork"],
   },
   {
     sport: "水泳",
@@ -424,7 +457,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "顔が前を向き、腰が沈んで抵抗が大きくなること。",
     arrangements: "泳力差が大きい場合は、距離ではなく姿勢維持の秒数で評価します。",
     tags: ["けのび", "姿勢", "初心者"],
-    conditionTags: ["beginner", "mixedAbility", "under60"],
+    conditionTags: ["beginner", "mixedAbility", "under60", "basicPractice", "warmup"],
   },
   {
     sport: "水泳",
@@ -443,7 +476,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "壁に近づきすぎて膝が詰まり、蹴り出しが弱くなること。",
     arrangements: "初心者はクイックターンではなくタッチターンで壁を強く蹴る練習にします。",
     tags: ["ターン", "大会前", "タイム短縮"],
-    conditionTags: ["preTournament", "under60", "mixedAbility"],
+    conditionTags: ["preTournament", "under60", "mixedAbility", "stamina", "gameSituation"],
   },
   {
     sport: "バドミントン",
@@ -462,7 +495,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "ネット前で体重が前に残り、奥の球に反応できないこと。",
     arrangements: "初心者は移動距離を短くし、上級者はスマッシュへの展開を追加します。",
     tags: ["ネット前", "ロブ", "前後移動"],
-    conditionTags: ["under60", "beginner", "fewTools"],
+    conditionTags: ["under60", "beginner", "fewTools", "offense", "defense"],
   },
   {
     sport: "バドミントン",
@@ -481,7 +514,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "打って終わりになり、返球に対して足が止まること。",
     arrangements: "体力差がある場合は半面の幅を狭め、連続本数を短くします。",
     tags: ["スマッシュ", "連続攻撃", "半面ゲーム"],
-    conditionTags: ["mixedAbility", "preTournament", "under60"],
+    conditionTags: ["mixedAbility", "preTournament", "under60", "offense", "smallSpace", "gameSituation"],
   },
   {
     sport: "吹奏楽",
@@ -500,7 +533,7 @@ const practiceMenuSeeds: PracticeMenuSeed[] = [
     commonMistakes: "音の入りが雑になり、伸ばしてから音程を直そうとすること。",
     arrangements: "初心者は4拍、上級者は12拍に伸ばして息の配分を変えます。",
     tags: ["基礎合奏", "音程", "ロングトーン"],
-    conditionTags: ["rainy", "beginner", "mixedAbility"],
+    conditionTags: ["rainy", "beginner", "mixedAbility", "warmup", "basicPractice", "teamwork"],
   },
   {
     sport: "吹奏楽",

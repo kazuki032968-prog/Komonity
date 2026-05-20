@@ -1,6 +1,7 @@
 import {
   initialPracticeMenu,
   initialPracticeStrategy,
+  todayMenuAdvancedConditionOptions,
   todayMenuConditionOptions,
 } from "../constants/app";
 import type {
@@ -90,7 +91,9 @@ export const normalizeMedia = (value: unknown): MediaAttachment[] => {
 
 const isTodayMenuConditionKey = (value: unknown): value is TodayMenuConditionKey =>
   typeof value === "string" &&
-  todayMenuConditionOptions.some((option) => option.key === value);
+  [...todayMenuConditionOptions, ...todayMenuAdvancedConditionOptions].some(
+    (option) => option.key === value
+  );
 
 /**
  * Firestore の練習メニューテンプレートを安全に復元します。

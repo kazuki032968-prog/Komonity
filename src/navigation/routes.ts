@@ -1,11 +1,20 @@
 import { staticScreenPathMap, timelineSectionPathMap } from "../constants/app";
-import type { PostDetailState, ReplyDetailState, ScreenKey, TimelineSectionKey } from "../types/app";
+import type {
+  PostDetailState,
+  ReplyDetailState,
+  ScreenKey,
+  SearchContentFilterKey,
+  TimelineSectionKey,
+  TodayMenuConditionKey,
+} from "../types/app";
 import { buildPostPath, buildProfilePath, buildReplyPath, buildSearchPath } from "../utils/appUtils";
 
 type ResolveScreenPathParams = {
   currentScreen: ScreenKey;
   activeTimelineSection: TimelineSectionKey;
   searchQuery: string;
+  activeSearchContentFilter: SearchContentFilterKey;
+  todayMenuConditions: TodayMenuConditionKey[];
   selectedProfileHandle: string;
   postDetail: Pick<PostDetailState, "id" | "source">;
   replyDetail: Pick<ReplyDetailState, "rootPostId" | "source" | "path">;
@@ -19,6 +28,8 @@ export function resolveScreenPath({
   currentScreen,
   activeTimelineSection,
   searchQuery,
+  activeSearchContentFilter,
+  todayMenuConditions,
   selectedProfileHandle,
   postDetail,
   replyDetail,
@@ -28,7 +39,10 @@ export function resolveScreenPath({
   }
 
   if (currentScreen === "search") {
-    return buildSearchPath(searchQuery);
+    return buildSearchPath(searchQuery, {
+      contentFilter: activeSearchContentFilter,
+      conditions: todayMenuConditions,
+    });
   }
 
   if (currentScreen === "user-profile") {

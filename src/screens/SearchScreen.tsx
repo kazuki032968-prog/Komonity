@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import {
   searchContentFilters,
   searchTabs,
+  todayMenuAdvancedConditionOptions,
   todayMenuConditionOptions,
 } from "../constants/app";
 import {
@@ -126,6 +128,16 @@ export function SearchScreen({
   onOpenExternalUrl: (url: string, label?: string) => void;
   getAuthorAvatarUrl: (payload: { uid?: string; name?: string }) => string;
 }) {
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const hasAdvancedCondition = todayMenuAdvancedConditionOptions.some((condition) =>
+    todayMenuConditions.includes(condition.key)
+  );
+  const showAdvancedFilters = isAdvancedFilterOpen || hasAdvancedCondition;
+  const handleToggleTodayMenuCondition = (key: TodayMenuConditionKey) => {
+    onChangeSearchContentFilter("feed");
+    onToggleTodayMenuCondition(key);
+  };
+
   const renderPostResult = (post: SearchContentItem, meta: string) => {
     const display = extractDisplayBodyAndTags(post.body);
     const authorAvatarUrl = getAuthorAvatarUrl({
@@ -294,7 +306,7 @@ export function SearchScreen({
                 <Pressable
                   key={condition.key}
                   style={[styles.searchFilterChip, selected && styles.searchFilterChipActive]}
-                  onPress={() => onToggleTodayMenuCondition(condition.key)}
+                  onPress={() => handleToggleTodayMenuCondition(condition.key)}
                 >
                   <Text
                     style={[
@@ -307,7 +319,47 @@ export function SearchScreen({
                 </Pressable>
               );
             })}
+            <Pressable
+              style={styles.searchFilterChip}
+              onPress={() => setIsAdvancedFilterOpen((current) => !current)}
+            >
+              <Text style={styles.searchFilterChipText}>
+                {showAdvancedFilters ? "閉じる" : "もっと見る"}
+              </Text>
+            </Pressable>
           </View>
+          {showAdvancedFilters ? (
+            <View style={styles.formGroup}>
+              <Text style={styles.todayMenuSearchTitle}>詳細条件</Text>
+              <Text style={styles.todayMenuSearchText}>
+                学年や練習の狙いまで少しだけ絞り込めます。
+              </Text>
+              <View style={styles.sportChipRow}>
+                {todayMenuAdvancedConditionOptions.map((condition) => {
+                  const selected = todayMenuConditions.includes(condition.key);
+                  return (
+                    <Pressable
+                      key={condition.key}
+                      style={[
+                        styles.searchFilterChip,
+                        selected && styles.searchFilterChipActive,
+                      ]}
+                      onPress={() => handleToggleTodayMenuCondition(condition.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.searchFilterChipText,
+                          selected && styles.searchFilterChipTextActive,
+                        ]}
+                      >
+                        {condition.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
         </View>
       ) : null}
 

@@ -20,9 +20,12 @@ const description =
   "Komonityは、専門外の部活指導で悩む顧問の先生と知見を持つ指導者をつなぎ、練習メニュー・戦術・相談・コミュニティで現場の知見を共有できるサービスです。";
 const ogImageUrl = `${siteUrl}/ogp.png`;
 const googleSiteVerification = "w9-kPf_JrwFTgLsZf1etFMNbG0pPycKx5WNQpVC7yIc";
+const sitemapLastModified = new Date().toISOString().slice(0, 10);
 const keywords = [
   "Komonity",
+  "Komonity 公式",
   "コモニティ",
+  "コモニティ 公式",
   "部活 顧問",
   "部活 顧問 悩み",
   "部活 顧問 相談",
@@ -99,6 +102,9 @@ const sitemapPaths = [
   { path: "/features/badge-trust-score", priority: "0.7", changefreq: "weekly" },
   { path: "/features/advisor-consultation", priority: "0.8", changefreq: "weekly" },
   { path: "/features/rainy-day-practice", priority: "0.8", changefreq: "weekly" },
+  { path: "/features/60-minute-practice", priority: "0.8", changefreq: "weekly" },
+  { path: "/features/beginner-practice", priority: "0.8", changefreq: "weekly" },
+  { path: "/features/small-space-practice", priority: "0.8", changefreq: "weekly" },
   { path: "/contact", priority: "0.5", changefreq: "monthly" },
   { path: "/privacy-policy", priority: "0.4", changefreq: "yearly" },
   { path: "/terms", priority: "0.4", changefreq: "yearly" },
@@ -209,6 +215,26 @@ const adsenseBlock = `
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}" crossorigin="anonymous"></script>
     <!-- komonity-adsense:end -->`;
 
+const staticHomeContent = `
+      <main id="komonity-static-home" aria-label="Komonity 公式サイト">
+        <h1>Komonity | 顧問の先生と指導者をつなぐ部活支援SNS</h1>
+        <p>
+          Komonityは、専門外の部活指導で悩む顧問の先生と、練習メニュー・戦術・怪我予防などの知見を持つ指導者をつなぐサービスです。
+          今日の練習メニュー、部活の相談、指導者プロフィール、活動バッジを通じて、部活現場の知見を探しやすくします。
+        </p>
+        <nav aria-label="Komonity 主要ページ">
+          <a href="/service-detail">Komonityのサービス詳細</a>
+          <a href="/features">部活指導・指導者集客の特集一覧</a>
+          <a href="/features/today-practice-menu-search">今日の練習メニュー検索</a>
+          <a href="/features/60-minute-practice">60分練習メニュー特集</a>
+          <a href="/features/beginner-practice">初心者向け練習特集</a>
+          <a href="/features/small-space-practice">少人数・省スペース練習特集</a>
+          <a href="/for-advisors">顧問の先生向け</a>
+          <a href="/for-coaches">指導者向け</a>
+          <a href="/contact">お問い合わせ</a>
+        </nav>
+      </main>`;
+
 html = html.replace(
   /\n\s*<!-- komonity-seo:start -->[\s\S]*?<!-- komonity-seo:end -->/u,
   ""
@@ -225,6 +251,7 @@ html = html.replace(
   /(\n\s*<!-- The `react-native-web` recommended style reset:)/u,
   `${adsenseBlock}$1`
 );
+html = html.replace(/<div id="root"><\/div>/u, `<div id="root">${staticHomeContent}\n    </div>`);
 
 writeFileSync(indexPath, html);
 writeFileSync(adsTxtOutputPath, adsTxtContent);
@@ -237,7 +264,7 @@ writeFileSync(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPaths
     .map(
       (entry) =>
-        `  <url>\n    <loc>${siteUrl}${entry.path === "/" ? "" : entry.path}</loc>\n    <changefreq>${entry.changefreq}</changefreq>\n    <priority>${entry.priority}</priority>\n  </url>`
+        `  <url>\n    <loc>${siteUrl}${entry.path === "/" ? "" : entry.path}</loc>\n    <lastmod>${sitemapLastModified}</lastmod>\n    <changefreq>${entry.changefreq}</changefreq>\n    <priority>${entry.priority}</priority>\n  </url>`
     )
     .join("\n")}\n</urlset>\n`
 );

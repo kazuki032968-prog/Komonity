@@ -977,9 +977,33 @@ export default function App() {
     setSearchQuery(query);
     setActiveSearchTab("trending-posts");
     setActiveSearchContentFilter("all");
+    setTodayMenuConditions([]);
     setCurrentScreen("search");
     setIsMenuOpen(false);
     updateBrowserPath({ path: buildSearchPath(query), mode });
+  };
+
+  const openSearchWithPreset = ({
+    query,
+    contentFilter = "all",
+    conditions = [],
+    mode = "push",
+  }: {
+    query: string;
+    contentFilter?: SearchContentFilterKey;
+    conditions?: TodayMenuConditionKey[];
+    mode?: "push" | "replace";
+  }) => {
+    setSearchQuery(query);
+    setActiveSearchTab("trending-posts");
+    setActiveSearchContentFilter(contentFilter);
+    setTodayMenuConditions(conditions);
+    setCurrentScreen("search");
+    setIsMenuOpen(false);
+    updateBrowserPath({
+      path: buildSearchPath(query, { contentFilter, conditions }),
+      mode,
+    });
   };
 
   const renderHashtagChips = (tags: string[]) => {
@@ -2827,7 +2851,55 @@ export default function App() {
         return /道具少な|少なめ|不要|ボールのみ|コーンのみ|準備物少/.test(menuText);
       }
 
-      return /体力差|レベル差|差が大きい|個人差|混在/.test(menuText);
+      if (condition === "mixedAbility") {
+        return /体力差|レベル差|差が大きい|個人差|混在/.test(menuText);
+      }
+
+      if (condition === "fewPeople") {
+        return /少人数|人数が少|少ない日|6〜|8〜|9〜|10人以下/.test(menuText);
+      }
+
+      if (condition === "juniorHigh") {
+        return /中学生|中学/.test(menuText);
+      }
+
+      if (condition === "highSchool") {
+        return /高校生|高校/.test(menuText);
+      }
+
+      if (condition === "basicPractice") {
+        return /基礎|基本|フォーム|反復|入門|姿勢|ステップ/.test(menuText);
+      }
+
+      if (condition === "injuryPrevention") {
+        return /怪我|ケガ|予防|ストレッチ|セルフケア|ウォームアップ|フォーム確認/.test(menuText);
+      }
+
+      if (condition === "teamwork") {
+        return /連携|声かけ|役割|サポート|チーム|コミュニケーション|判断/.test(menuText);
+      }
+
+      if (condition === "warmup") {
+        return /ウォームアップ|準備運動|アップ|動的ストレッチ|導入|可動域/.test(menuText);
+      }
+
+      if (condition === "stamina") {
+        return /体力|持久力|走力|スタミナ|インターバル|ラップ|運動量/.test(menuText);
+      }
+
+      if (condition === "defense") {
+        return /守備|ディフェンス|カバー|レシーブ|捕球|ブロック|クローズアウト/.test(menuText);
+      }
+
+      if (condition === "offense") {
+        return /攻撃|オフェンス|シュート|得点|突破|配球|フィニッシュ|ラストパス/.test(menuText);
+      }
+
+      if (condition === "smallSpace") {
+        return /狭い|省スペース|半面|体育館半面|スペース|15m|室内/.test(menuText);
+      }
+
+      return /実戦|試合形式|ゲーム|ミニゲーム|ケース|状況判断|ランダム/.test(menuText);
     });
   };
 
@@ -2836,6 +2908,10 @@ export default function App() {
       activeSearchContentFilter !== "all" &&
       item.source !== activeSearchContentFilter
     ) {
+      return false;
+    }
+
+    if (todayMenuConditions.length > 0 && item.source !== "feed") {
       return false;
     }
 
@@ -3119,7 +3195,8 @@ export default function App() {
       if (resolvedRoute.screen === "search") {
         setSearchQuery(resolvedRoute.searchQuery ?? "");
         setActiveSearchTab("trending-posts");
-        setActiveSearchContentFilter("all");
+        setActiveSearchContentFilter(resolvedRoute.searchContentFilter ?? "all");
+        setTodayMenuConditions(resolvedRoute.searchConditions ?? []);
       }
       if (resolvedRoute.screen === "profile-edit") {
         setProfileDraft(profileState);
@@ -3240,6 +3317,8 @@ export default function App() {
         currentScreen,
         activeTimelineSection,
         searchQuery,
+        activeSearchContentFilter,
+        todayMenuConditions,
         selectedProfileHandle: selectedUserProfile.handle,
         postDetail,
         replyDetail,
@@ -3248,6 +3327,7 @@ export default function App() {
     });
   }, [
     activeTimelineSection,
+    activeSearchContentFilter,
     currentScreen,
     pendingWebRoute,
     postDetail.id,
@@ -3257,6 +3337,7 @@ export default function App() {
     replyDetail.source,
     searchQuery,
     selectedUserProfile.handle,
+    todayMenuConditions,
   ]);
 
   const saveProfileEdits = async () => {
@@ -4446,6 +4527,7 @@ export default function App() {
       togglePostInteraction={togglePostInteraction}
       renderHashtagChips={renderHashtagChips}
       getAuthorAvatarUrl={getAuthorAvatarUrl}
+      openSearchWithPreset={openSearchWithPreset}
       overviewStats={overviewStats}
       handleLogout={handleLogout}
       renderPracticeMenu={renderPracticeMenu}

@@ -21,6 +21,9 @@ export type ScreenKey =
   | "feature-badge-trust-score"
   | "feature-advisor-consultation"
   | "feature-rainy-day-practice"
+  | "feature-60-minute-practice"
+  | "feature-beginner-practice"
+  | "feature-small-space-practice"
   | "feed"
   | "post-detail"
   | "reply-detail"
@@ -302,7 +305,19 @@ export type TodayMenuConditionKey =
   | "rainy"
   | "preTournament"
   | "fewTools"
-  | "mixedAbility";
+  | "mixedAbility"
+  | "fewPeople"
+  | "juniorHigh"
+  | "highSchool"
+  | "basicPractice"
+  | "injuryPrevention"
+  | "teamwork"
+  | "warmup"
+  | "stamina"
+  | "defense"
+  | "offense"
+  | "smallSpace"
+  | "gameSituation";
 
 export type PracticeMenuTemplate = {
   sport: string;
@@ -450,6 +465,8 @@ export type ResolvedWebRoute =
       screen: ScreenKey;
       timelineSection?: TimelineSectionKey;
       searchQuery?: string;
+      searchContentFilter?: SearchContentFilterKey;
+      searchConditions?: TodayMenuConditionKey[];
     }
   | {
       kind: "profile";
